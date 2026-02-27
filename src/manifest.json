@@ -1,0 +1,29 @@
+{
+  "version": "3.2.0",
+  "type": "media_renderer",
+  "name": "Naim-Topping-Vintage Master",
+  "description": "Unified Audiophile Driver: Naim Core (WAV), Topping Stack (IR), BM8000 (455kHz), and B&O Link",
+  "developer": "Custom Audiophile Integration",
+  "capabilities": ["transport_control", "now_playing_metadata", "media_browser", "media_search", "power_control", "volume_control"],
+  "resources": [
+    { "id": "play", "name": "Play", "type": "button" },
+    { "id": "pause", "name": "Pause", "type": "button" },
+    { "id": "next", "name": "Next", "type": "button" },
+    { "id": "prev", "name": "Previous", "type": "button" },
+    { "id": "party_mode", "name": "House Party Mode", "type": "switch" },
+    { "id": "source_selector", "name": "System Source", "type": "selector", "options": ["Naim Core", "B&O Streaming", "Beogram Vinyl", "Beocord Tape", "FM Radio"] },
+    { "id": "playlist_selector", "name": "Naim Favorites", "type": "selector", "options": ["Hi-Res Jazz", "Recently Added", "Classic Rock"] }
+  ],
+  "states": [
+    { "id": "TRACK_TITLE", "type": "string" },
+    { "id": "TRACK_ARTIST", "type": "string" },
+    { "id": "ALBUM_ART_URL", "type": "string" },
+    { "id": "AUDIO_QUALITY", "type": "string" },
+    { "id": "TRACK_PROGRESS", "type": "integer" },
+    { "id": "TRACK_DURATION", "type": "integer" },
+    { "id": "TRANSPORT_STATE", "type": "enum", "values": ["PLAYING", "PAUSED", "STOPPED"] },
+    { "id": "PARTY_STATE", "type": "boolean" },
+    { "id": "ONLINE_STATUS", "type": "enum", "values": ["ONLINE", "OFFLINE"] },
+    { "id": "VOLUME", "type": "integer", "min": 0, "max": 100 }
+  ]
+}
