@@ -10,8 +10,17 @@ local SAFE_VOL_LIMIT = 60
 local error_count = 0
 local favorites_map = { ["Hi-Res Jazz"] = 12, ["Recently Added"] = 45, ["Classic Rock"] = 7 }
 
+-- IR STRINGS
+local IR_D90_AES = send_ir("sendir,1:1,1,38000,1,1,342,171...[D90 AES]")
+local IR_D90_OPT = send_ir("sendir,1:1,1,38000,1,1,342,171...[D90 OPT]")
+local IR_A90_RCA = "sendir,1:2,1,38000,1,1,342,171...[A90_RCA_HEX]"
+local IR_A90_XLR = "sendir,1:2,1,38000,1,1,342,171...[A90_XLR_HEX]"
+local IR_BM8000_PH = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,47,15,15,15,3500"
+local IR_BM8000_TP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,47,15,3500"
+local IR_BM8000_Radio ="sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,15,15,15,47,15,3500" 
+
 function on_init()
-    print("Gen 3 Naim-Topping Master Starting...")
+    print("Naim-Topping Master Initialized at " .. CORE_IP)
     discover_upnp_port()
 end
 
@@ -28,6 +37,56 @@ function to_seconds(hms)
     if not hms then return 0 end
     local h, m, s = hms:match("(%d+):(%d+):(%d+)")
     return (tonumber(h or 0) * 3600) + (tonumber(m or 0) * 60) + tonumber(s or 0)
+end
+
+-- Force A90 to reset to internal 'Safe Volume' (Zero)
+function reset_topping_to_zero()
+    -- Topping A90 Discrete resets its 'Safe Volume' when inputs are toggled
+    -- We flip to RCA and back to XLR (or vice versa) to trigger the A90 internal reset
+    send_ir(IR_A90_RCA)
+    os.sleep(0.5)
+    send_ir(IR_A90_XLR)
+    
+    -- Sync BLI state to match the now-zeroed hardware
+    device:set_state("VOLUME", 0)
+    print("A90 Hardware Reset: Volume synced to Zero.")
+end
+
+-- IR ENGINE (38kHz & 455kHz)
+function send_ir(type)
+    local client = tcp.new()
+    client:connect(ITACH_IP, 4998, function(res, err)
+        if not err then 
+            local cmd = ""
+            if type == "PH" then
+                -- Phono (Beogram 8002)
+                cmd = IR_BM8000_PH
+            elseif type == "TP" then
+                -- Tape (Beocord 8004)
+                cmd = IR_BM8000_TP
+            elseif type == "RADIO" then
+                -- FM Radio (Beomaster 8000 Tuner)
+                cmd = IR_BM8000_TP
+            elseif type == "NAIM"
+            -- Naim Core DAC Input
+            cmd = IR_D90_AES
+            elseif type = "BEOLINK"
+            -- Beolink streaming sources
+            cmd = IR_D90_OPT
+            elseif type = "PREXLR"
+            -- Topping A90 Discrete XLR Input
+            cmd = IR_A90_XLR
+            elseif type = "PRERCA"
+            -- Topping A90 Discrete RCA Input
+            cmd = IR_A90_RCA
+            end
+            
+            if cmd ~= "" then
+                client:send(cmd .. "\r")
+            end
+            client:close() 
+        end
+    end)
 end
 
 -- 1. STATUS & QUALITY (Port 15081)
@@ -99,54 +158,36 @@ function on_resource_command(res_id, cmd_id, params)
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:AVTransport:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
 
     elseif res_id == "source_selector" then
-        if params.value == "Naim Core" or params.value == "B&O Streaming" then
+        reset_topping_to_zero()
+        -- Proceed with Naim or Vintage selection...
+        elseif params.value == "Naim Core" or params.value == "B&O Streaming" then
           -- Digital Stack uses the XLR input on the A90
-          send_topping_ir("INPUT_XLR")
+          send_ir("PREXLR")
+            if params.value == "Naim Core" then
+            send_ir("NAIM")
+            elseif params.value == "B&O Streaming" then
+            send_ir("BEOLINK") end
         elseif params.value == "Beogram Vinyl" or params.value == "Beocord Tape" or params.value == "FM Radio" then
           -- Vintage Stack uses the RCA input on the A90
-          send_topping_ir("INPUT_RCA") end
+          send_ir("PRERCA")
+            if params.value == "Beogram Vinyl" then
+            send_ir("PH")
+            elseif params.value == "Beocord Tape" then
+            send_ir("TP")
+            elseif params.value == "FM Radio" then
+            send_ir("RADIO")
+        end
     elseif res_id == "playlist_selector" then
         local id = favorites_map[params.value]
         if id then http.get("http://"..CORE_IP..":15081/favourites/"..id.."?cmd=play") end
-    elseif res_id == "vintage_selector" then
-        if params.value == "Beogram Vinyl" then 
-          send_itach_ir("PH") 
-        elseif params.value == "Beocord Tape" then 
-          send_itach_ir("TP") 
-        elseif params.value == "FM Radio" then 
-          send_itach_ir("RADIO") end
     elseif cmd_id == "set_volume" then
         local vol = math.min(params.volume or 0, SAFE_VOL_LIMIT)
         device:set_state("VOLUME", vol)
+        sync_topping_volume(vol)
     end
 end
 
--- 4. VINTAGE 455kHz IR (iTach Port 3)
-function send_itach_ir(type)
-    local client = tcp.new()
-    client:connect(ITACH_IP, 4998, function(res, err)
-        if not err then 
-            local cmd = ""
-            if type == "PH" then
-                -- Phono (Beogram 8002)
-                cmd = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,47,15,15,15,3500\r"
-            elseif type == "TP" then
-                -- Tape (Beocord 8004)
-                cmd = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,47,15,3500\r"
-            elseif type == "RADIO" then
-                -- FM Radio (Beomaster 8000 Tuner)
-                cmd = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,15,15,15,47,15,3500\r"
-            end
-            
-            if cmd ~= "" then
-                client:send(cmd)
-            end
-            client:close() 
-        end
-    end)
-end
-
--- 5. AUTO DISCOVERY
+-- 4. AUTO DISCOVERY
 function discover_upnp_port()
     local msearch = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nST: urn:schemas-upnp-org:service:AVTransport:1\r\nMAN: \"ssdp:discover\"\r\nMX: 3\r\n\r\n"
     local socket = udp.new()
