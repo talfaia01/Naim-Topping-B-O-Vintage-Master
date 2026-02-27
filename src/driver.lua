@@ -7,14 +7,17 @@ local tcp = require("tcp")
 local CORE_IP = device.address 
 local ITACH_IP = device:get_data("itach_ip") or "192.168.77.XXX"
 local SAFE_VOL_LIMIT = 60
+local LAST_KNOWN_VOL = 0 
 local error_count = 0
 local favorites_map = { ["Hi-Res Jazz"] = 12, ["Recently Added"] = 45, ["Classic Rock"] = 7 }
 
 -- IR STRINGS
-local IR_D90_AES = send_ir("sendir,1:1,1,38000,1,1,342,171...[D90 AES]")
-local IR_D90_OPT = send_ir("sendir,1:1,1,38000,1,1,342,171...[D90 OPT]")
+local IR_D90_AES = "sendir,1:1,1,38000,1,1,342,171...[D90 AES]"
+local IR_D90_OPT = "sendir,1:1,1,38000,1,1,342,171...[D90 OPT]"
 local IR_A90_RCA = "sendir,1:2,1,38000,1,1,342,171...[A90_RCA_HEX]"
 local IR_A90_XLR = "sendir,1:2,1,38000,1,1,342,171...[A90_XLR_HEX]"
+local IR_A90_VOL_UP = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,1514"
+local IR_A90_VOL_DOWN = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_BM8000_PH = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,47,15,15,15,3500"
 local IR_BM8000_TP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,47,15,3500"
 local IR_BM8000_Radio ="sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,15,15,15,47,15,3500" 
@@ -50,6 +53,30 @@ function reset_topping_to_zero()
     -- Sync BLI state to match the now-zeroed hardware
     device:set_state("VOLUME", 0)
     print("A90 Hardware Reset: Volume synced to Zero.")
+end
+
+-- Sync Volume of Topping with Hardware
+function sync_topping_volume(target_vol)
+    -- Calculate the difference between current state and requested state
+    local diff = target_vol - LAST_KNOWN_VOL
+    local command = ""
+    if diff == 0 then return end -- No change needed
+    if diff > 0 then
+        command = IR_A90_VOL_UP
+    else
+        command = IR_A90_VOL_DOWN
+        diff = math.abs(diff) -- Make it positive for the loop
+    end
+    -- Send IR pulses to match the 'diff'
+    -- Note: We use a loop to send multiple pulses for large jumps
+    for i = 1, diff do
+        send_ir(command)
+        -- Small delay (50ms) to allow the A90 relays to click safely
+        os.sleep(0.05) 
+    end
+    -- Update the internal tracker
+    LAST_KNOWN_VOL = target_vol
+    print("Topping A90 Volume Synced to: " .. target_vol)
 end
 
 -- IR ENGINE (38kHz & 455kHz)
