@@ -1,5 +1,5 @@
 {
-  "version": "3.3.0",
+  "version": "3.3.1",
   "type": "media_renderer",
   "name": "Naim-Topping-Vintage Master",
   "description": "Unified Gen 3 Driver: Naim WAV, Topping Stack Control, and Full BM8000 Datalink",
@@ -11,6 +11,15 @@
     "media_search",
     "power_control",
     "volume_control"
+  ],
+  "parameters": [
+    {
+      "id": "itach_ip",
+      "name": "iTach IP Address",
+      "type": "string",
+      "description": "Enter the IP of your Global Caché iTach (e.g., 192.168.77.XXX)",
+      "required": true
+    }
   ],
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
