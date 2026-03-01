@@ -197,37 +197,49 @@ function discover_upnp_port()
 end
 
 -- 6. DIAGNOSTIC SCRIPT BLOCK
-function run_naim_diagnostics()
-    print("--- STARTING NAIM GEN 3 DIAGNOSTICS ---")
-    
-    -- Test 1: Port 15081 (REST API)
-    http.get("http://" .. device.address .. ":15081/nowplaying", function(res, err)
-        if err then
-            print("DIAGNOSTIC FAIL: Port 15081 (REST) is unreachable. Check Naim Power/Network.")
-        else
-            print("DIAGNOSTIC PASS: Port 15081 is responding. HTTP Code: " .. res.status)
+function run_full_system_test()
+    print("--- 🚀 STARTING FULL HYBRID SYSTEM DIAGNOSTICS ---")
+
+    -- 1. Verify Naim Connectivity (Transport & Metadata)
+    http.get("http://" .. CORE_IP .. ":15081/nowplaying", function(res, err)
+        if not err then 
+            print("✅ PASS: Naim REST API (Port 15081) is responding.")
+        else 
+            print("❌ FAIL: Naim REST API unreachable. Check Power/Network.")
         end
     end)
 
-    -- Test 2: Port 16000 (UPnP WAV Metadata)
     local upnp_port = device:get_data("upnp_port") or "16000"
-    local upnp_url = "http://" .. device.address .. ":" .. upnp_port .. "/xml/AVTransport"
-    local test_soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:GetTransportInfo xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID></u:GetTransportInfo></s:Body></s:Envelope>]]
-
-    http.request(upnp_url, {method="POST", body=test_soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:AVTransport:1#GetTransportInfo"', ["Content-Type"]="text/xml"}}, function(res, err)
-        if err then
-            print("DIAGNOSTIC FAIL: Port " .. upnp_port .. " (UPnP) timed out. WAV Metadata will not appear.")
-        else
-            print("DIAGNOSTIC PASS: Port " .. upnp_port .. " is active. Metadata stream verified.")
+    http.get("http://" .. CORE_IP .. ":" .. upnp_port .. "/xml/AVTransport", function(res, err)
+        if not err then 
+            print("✅ PASS: Naim WAV Metadata (Port " .. upnp_port .. ") is active.")
+        else 
+            print("❌ FAIL: UPnP Port not discovered. SSDP might be blocked.")
         end
     end)
-    
-    -- Test 3: iTach Connectivity
-    local itach_ip = device:get_data("itach_ip")
-    if itach_ip then
-        print("DIAGNOSTIC: Attempting heartbeat to iTach at " .. itach_ip)
-        -- Logic to ping or open/close a TCP port to the iTach
-    else
-        print("DIAGNOSTIC WARNING: No itach_ip defined. Vintage BM8000 control will be disabled.")
+
+    -- 2. Verify iTach Connectivity (Preamps & Vintage)
+    local client = tcp.new()
+    client:connect(ITACH_IP, 4998, function(res, err)
+        if not err then 
+            print("✅ PASS: Global Caché iTach (" .. ITACH_IP .. ") is online.")
+            client:close()
+        else 
+            print("❌ FAIL: iTach unreachable. Check IP in BLI Resource Data.")
+        end
+    end)
+
+    -- 3. Verify B&O Multiroom Names
+    local rooms = {"Kitchen", "Bedroom", "Office", "Theater", "Family"}
+    for _, r in ipairs(rooms) do
+        -- We check if the resource exists in the BLI engine
+        if engine.resource(r .. "/BS_Core") then
+            print("✅ PASS: " .. r .. " Core found in BLI network.")
+        else
+            print("⚠️ WARNING: " .. r .. " Core not found. Check system naming.")
+        end
     end
+    
+    print("--- 🏁 DIAGNOSTICS COMPLETE ---")
 end
+
