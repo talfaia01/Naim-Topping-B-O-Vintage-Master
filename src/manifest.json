@@ -1,18 +1,48 @@
 {
-  "version": "3.2.0",
+  "version": "3.3.0",
   "type": "media_renderer",
   "name": "Naim-Topping-Vintage Master",
-  "description": "Unified Audiophile Driver: Naim Core (WAV), Topping Stack (IR), BM8000 (455kHz), and B&O Link",
+  "description": "Unified Gen 3 Driver: Naim WAV, Topping Stack Control, and Full BM8000 Datalink",
   "developer": "Custom Audiophile Integration",
-  "capabilities": ["transport_control", "now_playing_metadata", "media_browser", "media_search", "power_control", "volume_control"],
+  "capabilities": [
+    "transport_control",
+    "now_playing_metadata",
+    "media_browser",
+    "media_search",
+    "power_control",
+    "volume_control"
+  ],
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
     { "id": "pause", "name": "Pause", "type": "button" },
-    { "id": "next", "name": "Next", "type": "button" },
-    { "id": "prev", "name": "Previous", "type": "button" },
+    { "id": "next", "name": "Next/Fwd", "type": "button" },
+    { "id": "prev", "name": "Prev/Rew", "type": "button" },
     { "id": "party_mode", "name": "House Party Mode", "type": "switch" },
-    { "id": "source_selector", "name": "System Source", "type": "selector", "options": ["Naim Core", "B&O Streaming", "Beogram Vinyl", "Beocord Tape", "FM Radio"] },
-    { "id": "playlist_selector", "name": "Naim Favorites", "type": "selector", "options": ["Hi-Res Jazz", "Recently Added", "Classic Rock"] }
+    { "id": "bm8000_filter", "name": "BM8000 Filter", "type": "switch" },
+    {
+      "id": "source_selector",
+      "name": "System Source",
+      "type": "selector",
+      "options": ["Naim Core", "B&O Streaming", "Beogram Vinyl", "Beocord Tape", "FM Radio"]
+    },
+    {
+      "id": "a90_gain",
+      "name": "A90 Gain",
+      "type": "selector",
+      "options": ["Low Gain", "High Gain"]
+    },
+    {
+      "id": "a90_output",
+      "name": "A90 Output Mode",
+      "type": "selector",
+      "options": ["PRE (Speakers)", "HPA (Headphones)", "HPA+PRE"]
+    },
+    {
+      "id": "bm8000_presets",
+      "name": "BM8000 Presets",
+      "type": "selector",
+      "options": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P0"]
+    }
   ],
   "states": [
     { "id": "TRACK_TITLE", "type": "string" },
@@ -22,7 +52,6 @@
     { "id": "TRACK_PROGRESS", "type": "integer" },
     { "id": "TRACK_DURATION", "type": "integer" },
     { "id": "TRANSPORT_STATE", "type": "enum", "values": ["PLAYING", "PAUSED", "STOPPED"] },
-    { "id": "PARTY_STATE", "type": "boolean" },
     { "id": "ONLINE_STATUS", "type": "enum", "values": ["ONLINE", "OFFLINE"] },
     { "id": "VOLUME", "type": "integer", "min": 0, "max": 100 }
   ]
