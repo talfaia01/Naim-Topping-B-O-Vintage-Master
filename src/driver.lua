@@ -8,6 +8,7 @@ local CORE_IP = device.address
 local ITACH_IP = device:get_data("itach_ip") or "192.168.77.XXX"
 local SAFE_VOL_LIMIT = 60
 local LAST_KNOWN_VOL = 0 
+local CURRENT_SOURCE = ""
 local error_count = 0
 -- Naim Playlist IDs (Audit via Naim device IP)
 local favorites_map = { ["Hi-Res Jazz"] = 12, ["Recently Added"] = 45, ["Classic Rock"] = 7 }
