@@ -53,14 +53,6 @@ This system utilizes a **Dual-Path Hybrid Architecture** to maintain bit-perfect
 
 ---
 
-## 📂 Installation
-1.  Upload `src/manifest.json` to the **Specification** tab of the BLI Gen 3 Editor.
-2.  Upload `src/driver.lua` to the **Script** tab.
-3.  Configure `itach_ip` in the resource data to point to your [Global Caché](https://www.globalcache.com) unit.
-4.  **Important:** Set iTach **Port 3** to **IR Blaster** mode for 455kHz support.
-
----
-
 ## 🛠 Hardware Calibration, Safety & Final Setup
 
 To ensure **Hardware Safety** as well as the **Distribution Path** (Naim → House) and **Source Switching** are seamless, follow these hardware calibration steps:
