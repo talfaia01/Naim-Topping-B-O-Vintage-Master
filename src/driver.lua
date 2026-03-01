@@ -56,23 +56,19 @@ end
 
 function sync_topping_volume(target_vol) -- 'target_vol' is defined here as the argument
     local diff = target_vol - LAST_KNOWN_VOL
-    
     if diff == 0 then return end -- No movement needed
-
     local cmd = ""
     if diff > 0 then
         cmd = IR_A90_VOL_UP
     else
         cmd = IR_A90_VOL_DOWN
     end
-
     -- Loop the IR pulses based on the difference
     for i = 1, math.abs(diff) do
         send_ir(cmd)
-        -- 50ms delay to let the A90 Discrete relays click safely
-        os.sleep(0.05) 
+        -- 40ms delay to let the A90 Discrete relays click safely
+        os.sleep(0.04) 
     end
-
     -- Update our internal tracker so the next move is accurate
     LAST_KNOWN_VOL = target_vol
     print("Topping A90 Hardware Synced to: " .. target_vol)
@@ -178,20 +174,9 @@ function on_resource_command(res_id, cmd_id, params)
             local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
             -- The SearchCriteria must be properly escaped for XML
             local criteria = 'dc:title contains "' .. (params.query or "") .. '" or upnp:artist contains "' .. (params.query or "") .. '"'
-            local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body>
-                <u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
-                    <ContainerID>0</ContainerID>
-                    <SearchCriteria>]]..criteria..[[</SearchCriteria>
-                    <Filter>*</Filter>
-                    <StartingIndex>0</StartingIndex>
-                    <RequestedCount>50</RequestedCount>
-                    <SortCriteria></SortCriteria>
-                </u:Search>
-            </s:Body></s:Envelope>]]
-    
-            http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) 
-                device:send_content_results(res.body) 
-            end
+            local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ContainerID>0</ContainerID><SearchCriteria>]]..criteria..[[</SearchCriteria><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Search></s:Body></s:Envelope>]]
+            http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
+        end
     end
 
 -- 7. DISCOVERY
