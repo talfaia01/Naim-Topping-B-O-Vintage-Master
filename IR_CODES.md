@@ -20,7 +20,7 @@
 
 ---
 
-### 2. Topping D90 DAC (38kHz - Port 1:2)
+### 2. Topping D90 DAC (38kHz - Port 1:1)
 
 
 | Command | Global Caché IR String |
