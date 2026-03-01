@@ -1,8 +1,8 @@
 {
-  "version": "3.3.1",
+  "version": "3.3.2",
   "type": "media_renderer",
   "name": "Naim-Topping-Vintage Master",
-  "description": "Unified Gen 3 Driver: Naim WAV, Topping Stack Control, and Full BM8000 Datalink",
+  "description": "Gen 3 Multi-Protocol Driver: Naim WAV, Topping Stack, and Full BM8000 Datalink with Micro-Step Tuning",
   "developer": "Custom Audiophile Integration",
   "capabilities": [
     "transport_control",
@@ -24,10 +24,17 @@
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
     { "id": "pause", "name": "Pause", "type": "button" },
-    { "id": "next", "name": "Next/Fwd", "type": "button" },
-    { "id": "prev", "name": "Prev/Rew", "type": "button" },
+    { "id": "next", "name": "Next Track", "type": "button" },
+    { "id": "prev", "name": "Prev Track", "type": "button" },
+    
+    { "id": "search_fwd", "name": "Auto Scan >>", "type": "button" },
+    { "id": "search_rew", "name": "Auto Scan <<", "type": "button" },
+    { "id": "step_fwd", "name": "Fine Tune >", "type": "button" },
+    { "id": "step_rev", "name": "Fine Tune <", "type": "button" },
+    
     { "id": "party_mode", "name": "House Party Mode", "type": "switch" },
     { "id": "bm8000_filter", "name": "BM8000 Filter", "type": "switch" },
+    
     {
       "id": "source_selector",
       "name": "System Source",
