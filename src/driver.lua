@@ -77,12 +77,14 @@ function sync_topping_volume(target_vol) -- 'target_vol' is defined here as the 
 end
 
 function reset_a90_hardware()
+    print("CRITICAL: Executing A90 Hardware Volume Sync...")
     send_ir(IR_A90_RCA)
     os.sleep(0.5)
     send_ir(IR_A90_XLR)
+    os.sleep(0.5)
     device:set_state("VOLUME", 0)
     LAST_KNOWN_VOL = 0
-    print("A90 Hardware Zero Sync Complete.")
+    print("A90 Hardware Zero Sync Complete. Ready for session.")
 end
 
 -- 5. POLLING LOGIC
