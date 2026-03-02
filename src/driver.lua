@@ -225,11 +225,15 @@ function on_resource_command(res_id, cmd_id, params)
     elseif res_id == "a90_gain" then send_ir(IR_A90_GAIN)
     elseif res_id == "a90_output" then send_ir(IR_A90_OUT)
     elseif res_id == "bm8000_presets" then
-    -- params.value will be "P1", "P2", etc. from your manifest.json
-    local ir_payload = IR_BM8000_KEYS[params.value]
-        -- params.value will be "P1", "P2", etc. from your manifest.json
+        -- We map the internal ID (P1) to the IR code, 
+        -- regardless of what the user named it in the UI.
+        local preset_id = params.value 
+        local ir_payload = IR_BM8000_KEYS[preset_id]
+    
         if ir_payload then
-            print("BM8000: Selecting Preset " .. params.value)
+            -- Fetch the user's label for the logs
+            local user_label = device:get_data(string.lower(preset_id) .. "_label") or preset_id
+            print("BM8000: Tuning to " .. user_label .. " (" .. preset_id .. ")")
             send_ir(ir_payload)
         else
             print("⚠️ ERROR: Preset " .. (params.value or "nil") .. " not mapped.")
