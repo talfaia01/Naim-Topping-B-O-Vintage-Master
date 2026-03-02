@@ -161,11 +161,6 @@ function on_resource_command(res_id, cmd_id, params)
     local port = device:get_data("upnp_port") or "16000"
     local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
 
-    if cmd_id == "play" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
-    elseif cmd_id == "pause" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
-    elseif cmd_id == "next" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
-    elseif cmd_id == "prev" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
-
     if cmd_id == "set_volume" then
         -- We take the value directly from the BLI 'params'
         local requested_vol = params.volume or 0
@@ -180,9 +175,11 @@ function on_resource_command(res_id, cmd_id, params)
         CURRENT_SOURCE = params.value
         reset_a90_hardware()
         if params.value == "Naim Core" then
+            send_ir(IR_A90_XLR)
             send_ir(IR_D90_AES)
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
         elseif params.value == "B&O Streaming" then
+            send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
             engine.fire("Living_Room/BS_Core/PLAY", {})
         elseif params.value == "Beogram Vinyl" then
@@ -196,6 +193,17 @@ function on_resource_command(res_id, cmd_id, params)
             send_ir(IR_BM8000_RADIO)
         end
 
+    -- TUNING BRIDGE (NEXT/SEARCH_FWD)
+    elseif cmd_id == "next" or cmd_id == "search_fwd" then
+        if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
+            if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
+            else engine.fire("Living_Room/BS_Core/NEXT", {}) end
+        elseif CURRENT_SOURCE == "FM Radio" or CURRENT_SOURCE == "Beocord Tape" then
+            send_ir(IR_BM8000_SCAN_UP)
+        elseif CURRENT_SOURCE == "Beogram Vinyl" then
+            send_ir(IR_BM8000_FINE_UP)
+        end
+    
     -- TUNING BRIDGE (PREV/SEARCH_REW)
     elseif cmd_id == "prev" or cmd_id == "search_rew" then
         if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
