@@ -49,7 +49,7 @@ Targets Port 3 on the Global Caché iTach IP2IR. **Requirement:** Set Port 3 to 
 | **FINE TUNE <** | `sendir,1:3,1,40983,1,1,128,128,128,384,256,1023ABCAB,256,4000` |
 | **AUTO SCAN >>** | `sendir,1:3,1,455000,2,1,15,15,31,47,15,15,15,15,31,31,15,15,15,15,15,3500` |
 | **AUTO SCAN <<** | `` |
-| **RECORD** | `sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,31,31,15,15,15,3500` |
+| **RECORD** | `sendir,1:3,1,40983,1,1,128,128A,256,128,128,1023AABCAAB,128,1024AABCAABCAABCAABCAABCAABCAABC` |
 
 #### Numeric Keypad (Presets P1 - P0)
 
