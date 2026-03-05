@@ -9,6 +9,7 @@ local SAFE_VOL_LIMIT = 60
 local LAST_KNOWN_VOL = 0 
 local CURRENT_SOURCE = ""
 local error_count = 0
+local CURRENT_FM_PRESET = 1
 -- Naim Playlist IDs (Audit via Naim device IP)
 local favorites_map = { ["Hi-Res Jazz"] = 12, ["Recently Added"] = 45, ["Classic Rock"] = 7 }
 
@@ -50,6 +51,10 @@ local IR_BM8000_KEYS = {
     ["P9"] = "sendir,1:3,1,40983,1,1,128,256,128,256,256,1024,128,256,128,256,256,1024,128,256,128,256,256,4000",
     ["P0"] = "sendir,1:3,1,40983,1,1,128,768,128,1024,128,768,128,1024,128,768,128,4000"
 }
+-- Undocumented Discrete Datalink Codes
+local IR_BM8000_DATALINK_PHONO_ON = "sendir,1:3,1,40983,1,1,256,512,256,1024,256,512,256,1024,256,512,256,4000"
+local IR_BM8000_DATALINK_TAPE_ON  = "sendir,1:3,1,40983,1,1,128,128,256,128,384,1024,128,128,256,128,384,1024,128,128,256,128,384,4000"
+local IR_BM8000_DATALINK_OFF      = "sendir,1:3,1,40983,1,1,128,256,256,128,256,1024,128,256,256,128,256,1024,128,256,256,128,256,4000" -- Standard Standby
 
 -- 3. LIFECYCLE
 function on_init()
@@ -162,32 +167,35 @@ function on_resource_command(res_id, cmd_id, params)
     local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
 
     if cmd_id == "set_volume" then
-        -- We take the value directly from the BLI 'params'
         local requested_vol = params.volume or 0
-        -- Apply the Safety Hook
         local safe_vol = math.min(requested_vol, SAFE_VOL_LIMIT)
-        -- Update the BLI State UI
         device:set_state("VOLUME", safe_vol)
-        -- Pass the safe volume to the IR Sync Engine
-        sync_topping_volume(safe_vol) end
+        sync_topping_volume(safe_vol) 
+        -- Removed the breaking 'end' from here
   
     elseif res_id == "source_selector" then
         CURRENT_SOURCE = params.value
         reset_a90_hardware()
+        
         if params.value == "Naim Core" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_AES)
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
+            
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
-            engine.fire(""Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=MUSIC"", {})
+            -- Fixed the double-quote syntax error here
+            engine.fire("Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=MUSIC", {})
+            
         elseif params.value == "Beogram Vinyl" then
             send_ir(IR_A90_RCA)
-            send_ir(IR_BM8000_PH)
+            send_ir(IR_BM8000_DATALINK_PHONO_ON) -- Upgraded to discrete Datalink
+            
         elseif params.value == "Beocord Tape" then
             send_ir(IR_A90_RCA)
-            send_ir(IR_BM8000_TP)
+            send_ir(IR_BM8000_DATALINK_TAPE_ON) -- Upgraded to discrete Datalink
+            
         elseif params.value == "FM Radio" then
             send_ir(IR_A90_RCA)
             send_ir(IR_BM8000_RADIO)
@@ -195,24 +203,38 @@ function on_resource_command(res_id, cmd_id, params)
 
     -- TUNING BRIDGE (NEXT/SEARCH_FWD)
     elseif cmd_id == "next" or cmd_id == "search_fwd" then
-        if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
-            if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
-            else engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=NEXT&Continue type=short_press", {}) end
+       if CURRENT_SOURCE == "Naim Core" then 
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
+        elseif CURRENT_SOURCE == "B&O Streaming" then 
+            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=NEXT&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_UP)
         elseif CURRENT_SOURCE == "FM Radio" then
-            -- Add macro to toggle fwd FM presets
+            -- Increment preset, loop to 1 if it exceeds 9
+            CURRENT_FM_PRESET = CURRENT_FM_PRESET + 1
+            if CURRENT_FM_PRESET > 9 then CURRENT_FM_PRESET = 1 end
+            
+            local target_preset = "P" .. CURRENT_FM_PRESET
+            print("FM Radio: Scanning Forward to " .. target_preset)
+            send_ir(IR_BM8000_KEYS[target_preset])
         end
     
     -- TUNING BRIDGE (PREV/SEARCH_REW)
     elseif cmd_id == "prev" or cmd_id == "search_rew" then
-        if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
-            if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
-            else engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PREV&Continue type=short_press", {}) end
+        if CURRENT_SOURCE == "Naim Core" then 
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
+        elseif CURRENT_SOURCE == "B&O Streaming" then 
+            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PREV&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_DN)
         elseif CURRENT_SOURCE == "FM Radio" then
-            -- Add macro to toggle back FM presets
+            -- Decrement preset, loop to 9 if it drops below 1
+            CURRENT_FM_PRESET = CURRENT_FM_PRESET - 1
+            if CURRENT_FM_PRESET < 1 then CURRENT_FM_PRESET = 9 end
+            
+            local target_preset = "P" .. CURRENT_FM_PRESET
+            print("FM Radio: Scanning Backward to " .. target_preset)
+            send_ir(IR_BM8000_KEYS[target_preset])
         end
 
     -- TUNING BRIDGE (BM8000 Ch Balance Settings)
@@ -221,33 +243,48 @@ function on_resource_command(res_id, cmd_id, params)
 
     -- PLAY/PAUSE
     elseif cmd_id == "play" then
-        if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
-        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PLAY&Continue type=short_press", {})
-        elseif CURRENT_SOURCE == "Beocord Tape" then send_ir(IR_BM8000_TP) end
-    elseif cmd_id == "pause" then
-        if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
-        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PAUSE&Continue type=short_press", {})
-        elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then send_ir(IR_BM8000_STOP) end
+        if CURRENT_SOURCE == "Naim Core" then 
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
+        elseif CURRENT_SOURCE == "B&O Streaming" then 
+            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PLAY&Continue type=short_press", {})
+        elseif CURRENT_SOURCE == "Beocord Tape" then 
+            send_ir(IR_BM8000_DATALINK_TAPE_ON) 
+        end
         
-        -- TOPPING/BM8000 SELECTORS
-    elseif res_id == "a90_gain" then send_ir(IR_A90_GAIN)
-    elseif res_id == "a90_output" then send_ir(IR_A90_OUT)
+    elseif cmd_id == "pause" or cmd_id == "stop" then
+        if CURRENT_SOURCE == "Naim Core" then 
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
+        elseif CURRENT_SOURCE == "B&O Streaming" then 
+            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PAUSE&Continue type=short_press", {})
+        elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then 
+            send_ir(IR_BM8000_STOP) 
+        end
+        
+    -- TOPPING/BM8000 SELECTORS
+    elseif res_id == "a90_gain" then send_ir(IR_A90_GAIN_TOGGLE) -- Fixed variable name
+    elseif res_id == "a90_output" then send_ir(IR_A90_OUTPUT_TOGGLE) -- Fixed variable name
+    
     elseif res_id == "bm8000_presets" then
-        -- We map the internal ID (P1) to the IR code, 
-        -- regardless of what the user named it in the UI.
         local preset_id = params.value 
         local ir_payload = IR_BM8000_KEYS[preset_id]
-    
+        
         if ir_payload then
-            -- Fetch the user's label for the logs
+            -- Sync the tracker so Next/Prev commands stay perfectly aligned
+            local p_num = tonumber(preset_id:match("%d"))
+            if p_num and p_num >= 1 and p_num <= 9 then
+                CURRENT_FM_PRESET = p_num
+            end
+            
             local user_label = device:get_data(string.lower(preset_id) .. "_label") or preset_id
             print("BM8000: Tuning to " .. user_label .. " (" .. preset_id .. ")")
             send_ir(ir_payload)
         else
             print("⚠️ ERROR: Preset " .. (params.value or "nil") .. " not mapped.")
         end
-    elseif res_id == "bm8000_filter" then send_ir(IR_BM8000_FILTER)
-    end
+        
+    elseif res_id == "bm8000_filter" then 
+        send_ir(IR_BM8000_FILTER)
+    -- Removed the breaking 'end' that was here
     
     elseif res_id == "playlist_selector" then
         local id = favorites_map[params.value]
@@ -258,25 +295,10 @@ function on_resource_command(res_id, cmd_id, params)
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:AVTransport:1#Browse"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
 
     elseif cmd_id == "search" then
-        local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
-        -- The SearchCriteria must be properly escaped for XML
         local criteria = 'dc:title contains "' .. (params.query or "") .. '" or upnp:artist contains "' .. (params.query or "") .. '"'
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ContainerID>0</ContainerID><SearchCriteria>]]..criteria..[[</SearchCriteria><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Search></s:Body></s:Envelope>]]
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
     end
-end
-
--- 7. DISCOVERY
-function discover_upnp_port()
-    local msearch = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nST: urn:schemas-upnp-org:service:AVTransport:1\r\nMAN: \"ssdp:discover\"\r\nMX: 3\r\n\r\n"
-    local socket = udp.new()
-    socket:sendto(msearch, "239.255.255.250", 1900)
-    socket:receive(function(data, ip)
-        if data and ip == CORE_IP then
-            local p = data:match(":(%d+)/")
-            if p then device:set_data("upnp_port", p) end
-        end
-    end)
 end
 
 -- 6. DIAGNOSTIC SCRIPT BLOCK
@@ -302,6 +324,7 @@ function run_full_system_test()
     end)
 
     -- 2. Verify iTach Connectivity (Preamps & Vintage)
+    local ITACH_IP = get_itach_ip()
     local client = tcp.new()
     client:connect(ITACH_IP, 4998, function(res, err)
         if not err then 
