@@ -82,7 +82,7 @@ To ensure the "Zero-Sync" volume logic functions correctly, the A90 Discrete mus
 1.  Upload `src/manifest.json` to the **Specification** tab of the BLI Gen 3 Editor.
 2.  Upload `src/driver.lua` to the **Script** tab.
 3.  Configure `itach_ip` in the resource data to point to your [Global Caché IP2IR](https://www.globalcache.com).
-4.  **Important:** Set iTach **Port 3** to **IR Blaster** mode for 455kHz support.
+4.  **Important:** Set iTach **Port 3** to **IR Blaster** mode for 40.983kHz support.
 
 ---
 
