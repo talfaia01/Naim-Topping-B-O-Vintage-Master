@@ -277,13 +277,53 @@ function on_resource_command(res_id, cmd_id, params)
 
     elseif cmd_id == "browse" then
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Browse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ObjectID>]]..(params.container_id or "0")..[[</ObjectID><BrowseFlag>BrowseDirectChildren</BrowseFlag><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Browse></s:Body></s:Envelope>]]
-        http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:AVTransport:1#Browse"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
+        -- FIXED: Changed AVTransport to ContentDirectory in the SOAPACTION header
+        http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Browse"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
 
     elseif cmd_id == "search" then
         local criteria = 'dc:title contains "' .. (params.query or "") .. '" or upnp:artist contains "' .. (params.query or "") .. '"'
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ContainerID>0</ContainerID><SearchCriteria>]]..criteria..[[</SearchCriteria><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Search></s:Body></s:Envelope>]]
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
-    end
+    
+    -- HOUSE PARTY MODE
+    elseif res_id == "party_mode" then
+        if cmd_id == "set" then
+            local is_active = params.state
+            local rooms = {"Kitchen", "Bedroom", "Office", "Theater", "Family"}
+            
+            if is_active then
+                if CURRENT_SOURCE == "Naim Core" then
+                    print("🎉 House Party Mode ON: Activating Line-In Broadcast for Naim...")
+                    -- 1. Force the Living Room Core to open its Line-In
+                    engine.fire("Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=LINE_IN", {})
+                    -- Give the Beosound Core 1 second to establish the broadcast stream
+                    os.sleep(1) 
+                else
+                    print("🎉 House Party Mode ON: Distributing native Beolink stream...")
+                    -- If B&O Streaming (or another source) is active, do nothing to the Living Room Core. 
+                    -- It is already the active source on the Network Link.
+                end
+                
+                print("📡 Distributing to secondary zones...")
+                for _, r in ipairs(rooms) do
+                    -- 2. Fire the 'Join' command to each secondary Core
+                    engine.fire(r .. "/AV renderer/BS_Core/Send command?Command=JOIN", {})
+                end
+            else
+                print("🛑 House Party Mode OFF: Isolating Living Room...")
+                
+                for _, r in ipairs(rooms) do
+                    -- Drop the secondary rooms by putting them in Standby
+                    engine.fire(r .. "/AV renderer/BS_Core/Send command?Command=STANDBY", {})
+                end
+                
+                -- Only stop the Living Room Core's broadcast if it was acting as a dummy loop for the Naim.
+                -- If we are on B&O Streaming, we want the Living Room music to keep playing!
+                if CURRENT_SOURCE == "Naim Core" then
+                    engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=STANDBY", {})
+                end
+            end
+        end
 end
 
 -- 7. DISCOVERY
