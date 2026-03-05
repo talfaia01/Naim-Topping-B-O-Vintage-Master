@@ -10,7 +10,7 @@ The system integrates three distinct generations of technology into a unified Ba
 
 1.  **Digital Transport:** [Naim Uniti Core](https://www.naimaudio.com) serving bit-perfect **WAV rips** via BNC/AES.
 2.  **Conversion & Preamp:** [Topping D90 DAC](https://www.tpdz.net) and [Topping A90 Discrete](https://www.tpdz.net) managed via [Global Caché iTach IP2IR](https://www.globalcache.com).
-3.  **Vintage Analog:** [Beomaster 8000](https://beoworld.org) stack (Beogram 8002/Beocord 8004) controlled via **455kHz High-Frequency IR**.
+3.  **Vintage Analog:** [Beomaster 8000](https://beoworld.org) stack (Beogram 8002/Beocord 8004) controlled via the same unique unique 8-bit **40.983 kHz infrared protocol** as the original [Beolab Terminal](https://beoworld.org/beolab-terminal-remote-controller/) Remote Controller.
 4.  **Whole-Home Distribution:** Living Room fixed RCA path distributed to 5x Beosound Cores, Beosystem 4, and Beosound Stage.
 
 ## 🌐 Signal Path & Logic Map
@@ -48,7 +48,7 @@ This system utilizes a **Dual-Path Hybrid Architecture** to maintain bit-perfect
 *   **Safety Governor:** Hard-coded `SAFE_VOL_LIMIT = 60` to protect BeoLab speakers from gain spikes.
 
 ### 📼 Vintage Datalink Bridge
-*   **455kHz Control:** Targeted IR bursts simulate the [Beolab Terminal](https://beoworld.org) to automate the Beomaster 8000.
+*   **40.983 kHz Control:** Targeted IR bursts simulate the [Beolab Terminal]([https://beoworld.org](https://beoworld.org/beolab-terminal-remote-controller/) to automate the Beomaster 8000.
 *   **Automation:** Triggering "Phono" on the app automatically starts the Beogram 8002 turntable arm.
 
 ---
