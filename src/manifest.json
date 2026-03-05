@@ -34,6 +34,13 @@
       "description": "Enter comma-separated paths for the secondary zones (e.g., Kitchen/AV renderer/BS_Core, Bedroom/AV renderer/BS_Core)",
       "required": false
     },
+    {
+      "id": "run_diag_on_boot",
+      "name": "Run Diagnostics on Startup",
+      "type": "boolean",
+      "default": false,
+      "description": "Check this box to automatically run the diagnostic script in the system log whenever this driver starts."
+    },
     { "id": "p1_label", "name": "Preset 1 Name", "type": "string", "default": "P1" },
     { "id": "p2_label", "name": "Preset 2 Name", "type": "string", "default": "P2" },
     { "id": "p3_label", "name": "Preset 3 Name", "type": "string", "default": "P3" },
@@ -50,6 +57,7 @@
     { "id": "pause", "name": "Pause", "type": "button" },
     { "id": "next", "name": "Next Track", "type": "button" },
     { "id": "prev", "name": "Prev Track", "type": "button" },
+    { "id": "run_diagnostics", "name": "Run Diagnostics Now", "type": "button" },
     
     { "id": "search_fwd", "name": "Forward >>", "type": "button" },
     { "id": "search_rew", "name": "Rewind <<", "type": "button" },
