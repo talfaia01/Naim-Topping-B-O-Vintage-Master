@@ -198,7 +198,7 @@ function on_resource_command(res_id, cmd_id, params)
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
-            engine.fire("Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=MUSIC", {})
+            engine.fire(primary_core .."/Select source?Connector=&Origin=local&Source Type=MUSIC", {})
             
         elseif params.value == "Beogram Vinyl" then
             send_ir(IR_A90_RCA)
@@ -218,7 +218,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=NEXT&Continue type=short_press", {}) 
+            engine.fire(primary_core .."/Send command?Command=NEXT&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_UP)
         elseif CURRENT_SOURCE == "FM Radio" then
@@ -234,7 +234,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PREV&Continue type=short_press", {}) 
+            engine.fire(primary_core .."/Send command?Command=PREV&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_DN)
         elseif CURRENT_SOURCE == "FM Radio" then
@@ -254,7 +254,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PLAY&Continue type=short_press", {})
+            engine.fire(primary_core .."/Send command?Command=PLAY&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" then 
             send_ir(IR_BM8000_DATALINK_TAPE_ON) 
         end
@@ -263,7 +263,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PAUSE&Continue type=short_press", {})
+            engine.fire(primary_core .."/Send command?Command=PAUSE&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then 
             send_ir(IR_BM8000_STOP) 
         end
@@ -307,44 +307,36 @@ function on_resource_command(res_id, cmd_id, params)
 -- HOUSE PARTY MODE
     elseif res_id == "party_mode" then
         if cmd_id == "set" then
-            -- SAFETY FIX: Explicitly check for both boolean and string "ON" states from the BLI
             local is_active = (params.state == true or params.state == "ON" or params.state == "on")
-            local rooms = {"Kitchen", "Bedroom", "Office", "Theater", "Family"}
+            local party_zones = get_party_zones() -- Dynamically fetch the array of secondary zones
             
             if is_active then
                 if CURRENT_SOURCE == "Naim Core" then
                     print("🎉 House Party Mode ON: Activating Line-In Broadcast for Naim...")
-                    -- 1. Force the Living Room Core to open its Line-In
-                    engine.fire("Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=LINE_IN", {})
-                    -- Give the Beosound Core 1 second to establish the broadcast stream
+                    engine.fire(primary_core .. "/Select source?Connector=&Origin=local&Source Type=LINE_IN", {})
                     os.sleep(1) 
                 else
                     print("🎉 House Party Mode ON: Distributing native Beolink stream...")
-                    -- If B&O Streaming (or another source) is active, do nothing to the Living Room Core. 
-                    -- It is already the active source on the Network Link.
                 end
                 
                 print("📡 Distributing to secondary zones...")
-                for _, r in ipairs(rooms) do
-                    -- 2. Fire the 'Join' command to each secondary Core
-                    engine.fire(r .. "/AV renderer/BS_Core/Send command?Command=JOIN", {})
+                for _, z in ipairs(party_zones) do
+                    -- We directly append the command to the user-defined resource path
+                    engine.fire(z .. "/Send command?Command=JOIN", {})
                 end
             else
                 print("🛑 House Party Mode OFF: Isolating Living Room...")
                 
-                for _, r in ipairs(rooms) do
-                    -- Drop the secondary rooms by putting them in Standby
-                    engine.fire(r .. "/AV renderer/BS_Core/Send command?Command=STANDBY", {})
+                for _, z in ipairs(party_zones) do
+                    engine.fire(z .. "/Send command?Command=STANDBY", {})
                 end
                 
-                -- Only stop the Living Room Core's broadcast if it was acting as a dummy loop for the Naim.
-                -- If we are on B&O Streaming, we want the Living Room music to keep playing!
                 if CURRENT_SOURCE == "Naim Core" then
-                    engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=STANDBY", {})
+                    engine.fire(primary_core .. "/Send command?Command=STANDBY", {})
                 end
             end
         end
-    end 
+    end
 
 end 
 
@@ -395,13 +387,24 @@ function run_full_system_test()
         end
     end)
 
-    -- 3. Verify B&O Multiroom Names
-    local rooms = {"Kitchen", "Bedroom", "Office", "Theater", "Family"}
-    for _, r in ipairs(rooms) do
-        if engine.resource(r .. "/BS_Core") then
-            print("✅ PASS: " .. r .. " Core found in BLI network.")
-        else
-            print("⚠️ WARNING: " .. r .. " Core not found. Check system naming.")
+    -- 3. Verify B&O Multiroom Targets
+    local primary_core = get_primary_core()
+    if engine.resource(primary_core) then
+        print("✅ PASS: Primary Core found at: " .. primary_core)
+    else
+        print("⚠️ WARNING: Primary Core not found. Check parameter path: " .. primary_core)
+    end
+
+    local party_zones = get_party_zones()
+    if #party_zones == 0 then
+        print("⚠️ WARNING: No secondary Party Zones configured in BLI parameters.")
+    else
+        for _, z in ipairs(party_zones) do
+            if engine.resource(z) then
+                print("✅ PASS: Secondary Zone found at: " .. z)
+            else
+                print("⚠️ WARNING: Secondary Zone not found. Check parameter path: " .. z)
+            end
         end
     end
     
