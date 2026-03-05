@@ -58,6 +58,7 @@ local IR_BM8000_KEYS = {
 function on_init()
     print("Naim-Topping Master Driver v3.3.2 Starting...")
     discover_upnp_port()
+    run_full_system_test()
 end
 
 function process()
