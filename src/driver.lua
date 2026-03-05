@@ -19,8 +19,8 @@ end
 
 -- 2. IR COMMAND LIBRARY (Global Caché Format)
 -- Topping D90 (38kHz)
-local IR_D90_AES = "sendir,1:1,1,38000,1,1,342,171...[D90 AES]"
-local IR_D90_OPT = "sendir,1:1,1,38000,1,1,342,171...[D90 OPT]"
+local IR_D90_AES = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
+local IR_D90_OPT = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
 -- Topping A90 (38kHz)
 local IR_A90_XLR = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_RCA = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
@@ -28,27 +28,27 @@ local IR_A90_VOL_UP = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21
 local IR_A90_VOL_DOWN = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_GAIN_TOGGLE = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_OUTPUT_TOGGLE = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
--- Beomaster 8000 (455kHz on Port 3)
-local IR_BM8000_PH = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,47,15,15,15,3500"
-local IR_BM8000_TP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,47,15,3500"
-local IR_BM8000_RADIO = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,15,15,15,47,15,3500"
-local IR_BM8000_SCAN_UP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,31,31,15,15,15,15,15,3500"
-local IR_BM8000_SCAN_DN = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,31,15,15,15,15,15,3500"
-local IR_BM8000_FINE_UP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,31,31,15,15,15,15,15,3500"
-local IR_BM8000_FINE_DN = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,31,15,15,15,15,15,3500"
-local IR_BM8000_FILTER = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,15,31,3500"
-local IR_BM8000_STOP = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,47,15,15,15,15,15,15,15,3500"
+-- Beomaster 8000 (40.983kHz on Port 3)
+local IR_BM8000_PH = "sendir,1:3,1,40983,1,1,128,128,128,128,128,256,128,1024,128,128,128,128,128,256,128,1024,128,128,128,128,128,256,128,4000"
+local IR_BM8000_TP = "sendir,1:3,1,40983,1,1,128,256,256,256,128,1024,128,256,256,256,128,1024,128,256,256,256,128,4000"
+local IR_BM8000_RADIO = "sendir,1:3,1,40983,1,1,128,640,256,1024,128,640,256,1024,128,640,256,4000"
+local IR_BM8000_SCAN_UP = "sendir,1:3,1,40983,1,1,128,128,256,384,128,1024,128,128,256,384,128,1024,128,128,256,384,128,4000"
+local IR_BM8000_SCAN_DN = "sendir,1:3,1,40983,1,1,128,128,128,128,512,1024,128,128,128,128,512,1024,128,128,128,128,512,4000"
+local IR_BM8000_FINE_UP = "sendir,1:3,1,40983,1,1,128,128,128,512,128,1024,128,128,128,512,128,1024,128,128,128,512,128,4000"
+local IR_BM8000_FINE_DN = "sendir,1:3,1,40983,1,1,128,128,128,384,256,1024,128,128,128,384,256,1024,128,128,128,384,256,4000"
+local IR_BM8000_FILTER = "sendir,1:3,1,40983,1,1,128,256,384,128,128,1024,128,256,384,128,128,1024,128,256,384,128,128,4000"
+local IR_BM8000_STOP = "sendir,1:3,1,40983,1,1,128,128,256,128,128,128,128,1024,128,128,256,128,128,128,128,1024,128,128,256,128,128,128,128,4000"
 local IR_BM8000_KEYS = {
-    ["P1"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,15,15,3500",
-    ["P2"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,15,31,3500",
-    ["P3"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,15,31,15,3500",
-    ["P4"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,15,31,15,15,3500",
-    ["P5"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,15,31,15,15,15,3500",
-    ["P6"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,15,31,15,15,15,15,3500",
-    ["P7"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,15,15,31,15,15,15,15,15,3500",
-    ["P8"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,15,31,15,15,15,15,15,15,15,3500",
-    ["P9"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,15,31,15,15,15,15,15,15,15,15,3500",
-    ["P0"] = "sendir,1:3,1,455000,1,1,15,15,31,47,15,31,15,15,15,15,15,15,15,15,15,3500"
+    ["P1"] = "sendir,1:3,1,40983,1,1,128,640,256,1024,128,640,256,1024,128,640,256,4000",
+    ["P2"] = "sendir,1:3,1,40983,1,1,128,512,128,128,128,1024,128,512,128,128,128,1024,128,512,128,128,128,4000",
+    ["P3"] = "sendir,1:3,1,40983,1,1,128,512,384,1024,128,512,384,1024,128,512,384,4000",
+    ["P4"] = "sendir,1:3,1,40983,1,1,128,384,128,256,128,1024,128,384,128,256,128,1024,128,384,128,256,128,4000",
+    ["P5"] = "sendir,1:3,1,40983,1,1,128,384,128,128,256,1024,128,384,128,128,256,1024,128,384,128,128,256,4000",
+    ["P6"] = "sendir,1:3,1,40983,1,1,128,384,256,128,128,1024,128,384,256,128,128,1024,128,384,256,128,128,4000",
+    ["P7"] = "sendir,1:3,1,40983,1,1,128,384,512,1024,128,384,512,1024,128,384,512,4000",
+    ["P8"] = "sendir,1:3,1,40983,1,1,128,256,128,384,128,1024,128,256,128,384,128,1024,128,256,128,384,128,4000",
+    ["P9"] = "sendir,1:3,1,40983,1,1,128,256,128,256,256,1024,128,256,128,256,256,1024,128,256,128,256,256,4000",
+    ["P0"] = "sendir,1:3,1,40983,1,1,128,768,128,1024,128,768,128,1024,128,768,128,4000"
 }
 
 -- 3. LIFECYCLE
@@ -181,7 +181,7 @@ function on_resource_command(res_id, cmd_id, params)
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
-            engine.fire("Living_Room/BS_Core/PLAY", {})
+            engine.fire(""Main/Living Room/AV renderer/BS Core 5/Select source?Connector=&Origin=local&Source Type=MUSIC"", {})
         elseif params.value == "Beogram Vinyl" then
             send_ir(IR_A90_RCA)
             send_ir(IR_BM8000_PH)
@@ -197,36 +197,36 @@ function on_resource_command(res_id, cmd_id, params)
     elseif cmd_id == "next" or cmd_id == "search_fwd" then
         if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
             if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
-            else engine.fire("Living_Room/BS_Core/NEXT", {}) end
-        elseif CURRENT_SOURCE == "FM Radio" or CURRENT_SOURCE == "Beocord Tape" then
+            else engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=NEXT&Continue type=short_press", {}) end
+        elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_UP)
-        elseif CURRENT_SOURCE == "Beogram Vinyl" then
-            send_ir(IR_BM8000_FINE_UP)
+        elseif CURRENT_SOURCE == "FM Radio" then
+            -- Add macro to toggle fwd FM presets
         end
     
     -- TUNING BRIDGE (PREV/SEARCH_REW)
     elseif cmd_id == "prev" or cmd_id == "search_rew" then
         if CURRENT_SOURCE == "Naim Core" or CURRENT_SOURCE == "B&O Streaming" then
             if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
-            else engine.fire("Living_Room/BS_Core/PREV", {}) end
-        elseif CURRENT_SOURCE == "FM Radio" or CURRENT_SOURCE == "Beocord Tape" then
+            else engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PREV&Continue type=short_press", {}) end
+        elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_DN)
-        elseif CURRENT_SOURCE == "Beogram Vinyl" then
-            send_ir(IR_BM8000_FINE_DN)
+        elseif CURRENT_SOURCE == "FM Radio" then
+            -- Add macro to toggle back FM presets
         end
 
-    -- TUNING BRIDGE (FINE STEPS)
+    -- TUNING BRIDGE (BM8000 Ch Balance Settings)
     elseif cmd_id == "step_fwd" then send_ir(IR_BM8000_FINE_UP)
     elseif cmd_id == "step_rev" then send_ir(IR_BM8000_FINE_DN)
 
     -- PLAY/PAUSE
     elseif cmd_id == "play" then
         if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
-        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Living_Room/BS_Core/PLAY", {})
+        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PLAY&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" then send_ir(IR_BM8000_TP) end
     elseif cmd_id == "pause" then
         if CURRENT_SOURCE == "Naim Core" then http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
-        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Living_Room/BS_Core/PAUSE", {})
+        elseif CURRENT_SOURCE == "B&O Streaming" then engine.fire("Main/Living Room/AV renderer/BS Core 5/Send command?Command=PAUSE&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then send_ir(IR_BM8000_STOP) end
         
         -- TOPPING/BM8000 SELECTORS
