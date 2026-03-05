@@ -6,7 +6,7 @@ This document consolidates the "Expert Level" configurations and calibration ste
 ---
 
 ## 🔌 1. Hardware & Physical Setup
-*   **iTach Port 3 Blaster Mode:** In the [Global Caché Web UI](https://www.globalcache.com), you **must** manually set Port 3 to **"IR Blaster."** Standard "Emitter" mode lacks the power to carry the 455kHz signal required by the Beomaster 8000.
+*   **iTach Port 3 Blaster Mode:** In the [Global Caché Web UI](https://www.globalcache.com), you **must** manually set Port 3 to **"IR Blaster."** Standard "Emitter" mode lacks the power to carry the 40.983kHz signal required by the Beomaster 8000.
 *   **BM8000 Line-of-Sight:** Position the IR Blaster to target the **right side** of the Beomaster 8000’s glass panel. The vintage 10-bit microprocessor's IR receiver is located behind the display array.
 *   **Static IP Mapping:** Ensure the **Naim Core**, **iTach**, and **BLI Gen 3** all have reserved/static IPs in your router. This eliminates "handshake lag" when the BLI fetches WAV metadata.
 
