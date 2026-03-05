@@ -20,6 +20,20 @@
       "description": "Enter the IP of your Global Caché iTach (e.g., 192.168.77.XXX)",
       "required": true
     },
+    {
+      "id": "primary_core_path",
+      "name": "Living Room Core Path",
+      "type": "string",
+      "description": "Enter the exact BLI resource path for the main broadcaster (e.g., Main/Living Room/AV renderer/BS Core 5)",
+      "required": true
+    },
+    {
+      "id": "party_zone_paths",
+      "name": "Party Zone Paths",
+      "type": "string",
+      "description": "Enter comma-separated paths for the secondary zones (e.g., Kitchen/AV renderer/BS_Core, Bedroom/AV renderer/BS_Core)",
+      "required": false
+    },
     { "id": "p1_label", "name": "Preset 1 Name", "type": "string", "default": "P1" },
     { "id": "p2_label", "name": "Preset 2 Name", "type": "string", "default": "P2" },
     { "id": "p3_label", "name": "Preset 3 Name", "type": "string", "default": "P3" },
