@@ -73,9 +73,14 @@ local IR_BM8000_KEYS = {
 
 -- 3. LIFECYCLE
 function on_init()
-    print("Naim-Topping Master Driver v3.3.2 Starting...")
+    print("Naim-Topping Master Driver v3.3.3 Starting...")
     discover_upnp_port()
-    run_full_system_test()
+    
+    -- Check the BLI UI parameter to see if the user wants an automatic boot test
+    local run_auto_diag = device:get_data("run_diag_on_boot")
+    if run_auto_diag == true or run_auto_diag == "true" then
+        run_full_system_test()
+    end
 end
 
 function process()
@@ -249,6 +254,11 @@ function on_resource_command(res_id, cmd_id, params)
     elseif cmd_id == "step_fwd" then send_ir(IR_BM8000_FINE_UP)
     elseif cmd_id == "step_rev" then send_ir(IR_BM8000_FINE_DN)
 
+    -- ON-DEMAND DIAGNOSTICS
+    elseif cmd_id == "run_diagnostics" then
+        print("🛠️ Manual Diagnostic Run Triggered via UI...")
+        run_full_system_test()
+    
     -- PLAY/PAUSE
     elseif cmd_id == "play" then
         if CURRENT_SOURCE == "Naim Core" then 
