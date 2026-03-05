@@ -34,9 +34,9 @@ Control is centralized via a [Global Caché iTach IP2IR](https://www.globalcache
 | iTach Port | Frequency | Protocol | Hardware Targets |
 | :--- | :--- | :--- | :--- |
 | **Port 1 & 2** | **38kHz** | NEC/38kHz IR | Topping D90 & A90 Discrete |
-| **Port 3** | **455kHz** | B&O/455kHz IR | Beomaster 8000 (Datalink Bridge) |
+| **Port 3** | **40.983Hz** | B&O/40.983kHz IR | Beomaster 8000 (Datalink Bridge) |
 
-*   **CRITICAL SETTING:** Port 3 **MUST** be configured as an **"IR Blaster"** in the iTach Web UI to support the 455kHz carrier frequency required by the [BeoLab Terminal](https://beoworld.org) protocol.
+*   **CRITICAL SETTING:** Port 3 **MUST** be configured as an **"IR Blaster"** in the iTach Web UI to support the 40.983kHz carrier frequency required by the [BeoLab Terminal](https://beoworld.org) protocol.
 
 ---
 
