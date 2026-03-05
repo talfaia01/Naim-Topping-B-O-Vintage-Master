@@ -19,6 +19,23 @@ function get_itach_ip()
     return (ip and ip ~= "") and ip or "0.0.0.0"
 end
 
+function get_primary_core()
+    local path = device:get_data("primary_core_path")
+    return (path and path ~= "") and path or primary_core
+end
+
+function get_party_zones()
+    local zones_str = device:get_data("party_zone_paths") or ""
+    local zones = {}
+    for z in string.gmatch(zones_str, "([^,]+)") do
+        local clean_z = z:match("^%s*(.-)%s*$") -- Trims accidental whitespace
+        if clean_z and clean_z ~= "" then
+            table.insert(zones, clean_z)
+        end
+    end
+    return zones
+end
+
 -- 2. IR COMMAND LIBRARY (Global Caché Format)
 -- Topping D90 (38kHz)
 local IR_D90_AES = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
@@ -161,7 +178,8 @@ end
 function on_resource_command(res_id, cmd_id, params)
     local port = device:get_data("upnp_port") or "16000"
     local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
-
+    local primary_core = get_primary_core() -- Dynamic Target
+    
     if cmd_id == "set_volume" then
         local requested_vol = params.volume or 0
         local safe_vol = math.min(requested_vol, SAFE_VOL_LIMIT)
