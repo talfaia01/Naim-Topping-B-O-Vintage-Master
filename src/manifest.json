@@ -52,6 +52,12 @@
       "options": ["Naim Core", "B&O Streaming", "Beogram Vinyl", "Beocord Tape", "FM Radio"]
     },
     {
+      "id": "playlist_selector",
+      "name": "Naim Playlists",
+      "type": "selector",
+      "options": ["Hi-Res Jazz", "Recently Added", "Classic Rock"]
+    },
+    {
       "id": "a90_gain",
       "name": "A90 Gain",
       "type": "selector",
