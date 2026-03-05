@@ -285,10 +285,11 @@ function on_resource_command(res_id, cmd_id, params)
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ContainerID>0</ContainerID><SearchCriteria>]]..criteria..[[</SearchCriteria><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Search></s:Body></s:Envelope>]]
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
     
-    -- HOUSE PARTY MODE
+-- HOUSE PARTY MODE
     elseif res_id == "party_mode" then
         if cmd_id == "set" then
-            local is_active = params.state
+            -- SAFETY FIX: Explicitly check for both boolean and string "ON" states from the BLI
+            local is_active = (params.state == true or params.state == "ON" or params.state == "on")
             local rooms = {"Kitchen", "Bedroom", "Office", "Theater", "Family"}
             
             if is_active then
@@ -324,7 +325,9 @@ function on_resource_command(res_id, cmd_id, params)
                 end
             end
         end
-end
+    end 
+
+end 
 
 -- 7. DISCOVERY
 function discover_upnp_port()
