@@ -57,7 +57,7 @@ This system utilizes a **Dual-Path Hybrid Architecture** to maintain bit-perfect
 
 To ensure **Hardware Safety** as well as the **Distribution Path** (Naim → House) and **Source Switching** are seamless, follow these hardware calibration steps:
 
-### Topping A90 Discrete Settings
+### 1. Topping A90 Discrete Settings
 To ensure the "Zero-Sync" volume logic functions correctly, the A90 Discrete must be configured as follows:
 *   **Safe Volume Mode (SAFE):** Set to **ON**.
 *   **Safe Volume Level:** Set to **0** (or -99dB).
