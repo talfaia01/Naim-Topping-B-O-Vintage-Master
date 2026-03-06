@@ -1,8 +1,8 @@
 {
-  "version": "3.3.2",
+  "version": "3.4.0",
   "type": "media_renderer",
   "name": "Naim-Topping-Vintage Master",
-  "description": "Gen 3 Multi-Protocol Driver: Naim WAV, Topping Stack, and Full BM8000 Datalink with Micro-Step Tuning",
+  "description": "Gen 3 Multi-Protocol Driver: Naim WAV, Topping Stack, BM8000 Datalink, and Dynamic Playlists",
   "developer": "Custom Audiophile Integration",
   "capabilities": [
     "transport_control",
@@ -52,32 +52,47 @@
     { "id": "p9_label", "name": "Preset 9 Name", "type": "string", "default": "P9" },
     { "id": "p0_label", "name": "Preset 0 Name", "type": "string", "default": "P0" }
   ],
+  "resource_types": [
+    {
+      "id": "naim_playlist",
+      "name": "Naim Playlist",
+      "description": "Captured or manual Naim Core Playlist",
+      "parameters": [
+        { "id": "playlist_address", "type": "string", "name": "Playlist Address (ID)", "required": true }
+      ],
+      "commands": [
+        { "id": "play_naim_playlist", "name": "Play Playlist" }
+      ]
+    },
+    {
+      "id": "bo_playlist",
+      "name": "B&O Playlist",
+      "description": "Manual entry for B&O / Tidal playlist",
+      "parameters": [
+        { "id": "playlist_address", "type": "string", "name": "Tidal URL Address", "required": true }
+      ],
+      "commands": [
+        { "id": "play_bo_playlist", "name": "Play Playlist" }
+      ]
+    }
+  ],
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
     { "id": "pause", "name": "Pause", "type": "button" },
     { "id": "next", "name": "Next Track", "type": "button" },
     { "id": "prev", "name": "Prev Track", "type": "button" },
-    { "id": "run_diagnostics", "name": "Run Diagnostics Now", "type": "button" },
-    
     { "id": "search_fwd", "name": "Forward >>", "type": "button" },
     { "id": "search_rew", "name": "Rewind <<", "type": "button" },
     { "id": "step_fwd", "name": "Balance >", "type": "button" },
     { "id": "step_rev", "name": "Balance <", "type": "button" },
-    
     { "id": "party_mode", "name": "House Party Mode", "type": "switch" },
     { "id": "bm8000_filter", "name": "BM8000 Filter", "type": "switch" },
-    
+    { "id": "run_diagnostics", "name": "Run Diagnostics Now", "type": "button" },
     {
       "id": "source_selector",
       "name": "System Source",
       "type": "selector",
       "options": ["Naim Core", "B&O Streaming", "Beogram Vinyl", "Beocord Tape", "FM Radio"]
-    },
-    {
-      "id": "playlist_selector",
-      "name": "Naim Playlists",
-      "type": "selector",
-      "options": ["Hi-Res Jazz", "Recently Added", "Classic Rock"]
     },
     {
       "id": "a90_gain",
