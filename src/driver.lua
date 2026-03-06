@@ -9,11 +9,9 @@ local SAFE_VOL_LIMIT = 60
 local LAST_KNOWN_VOL = 0 
 local CURRENT_SOURCE = ""
 local error_count = 0
-local CURRENT_FM_PRESET = 1 -- FM State Tracker for Next/Prev loops
+local CURRENT_FM_PRESET = 1 
 
--- Naim Playlist IDs (Audit via Naim device IP)
-local favorites_map = { ["Hi-Res Jazz"] = 12, ["Recently Added"] = 45, ["Classic Rock"] = 7 }
-
+-- 2. PARAMETER HELPERS
 function get_itach_ip()
     local ip = device:get_data("itach_ip")
     return (ip and ip ~= "") and ip or "0.0.0.0"
@@ -21,26 +19,22 @@ end
 
 function get_primary_core()
     local path = device:get_data("primary_core_path")
-    return (path and path ~= "") and path or primary_core
+    return (path and path ~= "") and path or "Main/Living Room/AV renderer/BS Core 5"
 end
 
 function get_party_zones()
     local zones_str = device:get_data("party_zone_paths") or ""
     local zones = {}
     for z in string.gmatch(zones_str, "([^,]+)") do
-        local clean_z = z:match("^%s*(.-)%s*$") -- Trims accidental whitespace
-        if clean_z and clean_z ~= "" then
-            table.insert(zones, clean_z)
-        end
+        local clean_z = z:match("^%s*(.-)%s*$")
+        if clean_z and clean_z ~= "" then table.insert(zones, clean_z) end
     end
     return zones
 end
 
--- 2. IR COMMAND LIBRARY (Global Caché Format)
--- Topping D90 (38kHz)
+-- 3. IR COMMAND LIBRARY (Global Caché Format)
 local IR_D90_AES = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_D90_OPT = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
--- Topping A90 (38kHz)
 local IR_A90_XLR = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_RCA = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_VOL_UP = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,1514"
@@ -48,7 +42,6 @@ local IR_A90_VOL_DOWN = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,
 local IR_A90_GAIN_TOGGLE = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,21,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,64,21,64,21,64,21,1514"
 local IR_A90_OUTPUT_TOGGLE = "sendir,1:2,1,38000,1,1,342,171,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,1514"
 
--- Beomaster 8000 (40.983kHz on Port 3)
 local IR_BM8000_DATALINK_PHONO_ON = "sendir,1:3,1,40983,1,1,256,512,256,1024,256,512,256,1024,256,512,256,4000"
 local IR_BM8000_DATALINK_TAPE_ON  = "sendir,1:3,1,40983,1,1,128,128,256,128,384,1024,128,128,256,128,384,1024,128,128,256,128,384,4000"
 local IR_BM8000_RADIO = "sendir,1:3,1,40983,1,1,128,640,256,1024,128,640,256,1024,128,640,256,4000"
@@ -71,12 +64,11 @@ local IR_BM8000_KEYS = {
     ["P0"] = "sendir,1:3,1,40983,1,1,128,768,128,1024,128,768,128,1024,128,768,128,4000"
 }
 
--- 3. LIFECYCLE
+-- 4. LIFECYCLE
 function on_init()
-    print("Naim-Topping Master Driver v3.3.3 Starting...")
+    print("Naim-Topping Master Driver v3.4.0 Starting...")
     discover_upnp_port()
     
-    -- Check the BLI UI parameter to see if the user wants an automatic boot test
     local run_auto_diag = device:get_data("run_diag_on_boot")
     if run_auto_diag == true or run_auto_diag == "true" then
         run_full_system_test()
@@ -87,11 +79,11 @@ function process()
     while true do
         heartbeat_and_status()
         poll_upnp_metadata_and_progress()
-        os.sleep(3) -- Smooth progress bar polling
+        os.sleep(3) 
     end
 end
 
--- 4. UTILITIES
+-- 5. UTILITIES
 function to_seconds(hms)
     if not hms then return 0 end
     local h, m, s = hms:match("(%d+):(%d+):(%d+)")
@@ -132,10 +124,10 @@ function reset_a90_hardware()
     os.sleep(0.5)
     device:set_state("VOLUME", 0)
     LAST_KNOWN_VOL = 0
-    print("A90 Hardware Zero Sync Complete. Ready for session.")
+    print("A90 Hardware Zero Sync Complete.")
 end
 
--- 5. POLLING LOGIC
+-- 6. POLLING LOGIC
 function heartbeat_and_status()
     http.get("http://" .. CORE_IP .. ":15081/nowplaying", function(res, err)
         if err then
@@ -179,13 +171,18 @@ function poll_upnp_metadata_and_progress()
     end)
 end
 
--- 6. COMMANDS
+-- 7. COMMAND EXECUTIONS
 function on_resource_command(res_id, cmd_id, params)
     local port = device:get_data("upnp_port") or "16000"
     local url = "http://" .. CORE_IP .. ":" .. port .. "/xml/ContentDirectory"
-    local primary_core = get_primary_core() -- Dynamic Target
-    
-    if cmd_id == "set_volume" then
+    local primary_core = get_primary_core()
+
+    -- ON-DEMAND DIAGNOSTICS
+    if cmd_id == "run_diagnostics" then
+        print("🛠️ Manual Diagnostic Run Triggered via UI...")
+        run_full_system_test()
+
+    elseif cmd_id == "set_volume" then
         local requested_vol = params.volume or 0
         local safe_vol = math.min(requested_vol, SAFE_VOL_LIMIT)
         device:set_state("VOLUME", safe_vol)
@@ -199,20 +196,16 @@ function on_resource_command(res_id, cmd_id, params)
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_AES)
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
-            
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
-            engine.fire(primary_core .."/Select source?Connector=&Origin=local&Source Type=MUSIC", {})
-            
+            engine.fire(primary_core .. "/Select source?Connector=&Origin=local&Source Type=MUSIC", {})
         elseif params.value == "Beogram Vinyl" then
             send_ir(IR_A90_RCA)
             send_ir(IR_BM8000_DATALINK_PHONO_ON)
-            
         elseif params.value == "Beocord Tape" then
             send_ir(IR_A90_RCA)
             send_ir(IR_BM8000_DATALINK_TAPE_ON)
-            
         elseif params.value == "FM Radio" then
             send_ir(IR_A90_RCA)
             send_ir(IR_BM8000_RADIO)
@@ -223,7 +216,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=next")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire(primary_core .."/Send command?Command=NEXT&Continue type=short_press", {}) 
+            engine.fire(primary_core .. "/Send command?Command=NEXT&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_UP)
         elseif CURRENT_SOURCE == "FM Radio" then
@@ -239,7 +232,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=prev")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire(primary_core .."/Send command?Command=PREV&Continue type=short_press", {}) 
+            engine.fire(primary_core .. "/Send command?Command=PREV&Continue type=short_press", {}) 
         elseif CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "Beocord Tape" then
             send_ir(IR_BM8000_SCAN_DN)
         elseif CURRENT_SOURCE == "FM Radio" then
@@ -250,21 +243,16 @@ function on_resource_command(res_id, cmd_id, params)
             send_ir(IR_BM8000_KEYS[target_preset])
         end
 
-    -- TUNING BRIDGE (BM8000 Ch Balance Settings)
+    -- TUNING BRIDGE (BM8000 Settings)
     elseif cmd_id == "step_fwd" then send_ir(IR_BM8000_FINE_UP)
     elseif cmd_id == "step_rev" then send_ir(IR_BM8000_FINE_DN)
 
-    -- ON-DEMAND DIAGNOSTICS
-    elseif cmd_id == "run_diagnostics" then
-        print("🛠️ Manual Diagnostic Run Triggered via UI...")
-        run_full_system_test()
-    
     -- PLAY/PAUSE
     elseif cmd_id == "play" then
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire(primary_core .."/Send command?Command=PLAY&Continue type=short_press", {})
+            engine.fire(primary_core .. "/Send command?Command=PLAY&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" then 
             send_ir(IR_BM8000_DATALINK_TAPE_ON) 
         end
@@ -273,7 +261,7 @@ function on_resource_command(res_id, cmd_id, params)
         if CURRENT_SOURCE == "Naim Core" then 
             http.get("http://"..CORE_IP..":15081/nowplaying?cmd=pause")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
-            engine.fire(primary_core .."/Send command?Command=PAUSE&Continue type=short_press", {})
+            engine.fire(primary_core .. "/Send command?Command=PAUSE&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then 
             send_ir(IR_BM8000_STOP) 
         end
@@ -287,26 +275,38 @@ function on_resource_command(res_id, cmd_id, params)
         local ir_payload = IR_BM8000_KEYS[preset_id]
         if ir_payload then
             local p_num = tonumber(preset_id:match("%d"))
-            if p_num and p_num >= 1 and p_num <= 9 then
-                CURRENT_FM_PRESET = p_num
-            end
+            if p_num and p_num >= 1 and p_num <= 9 then CURRENT_FM_PRESET = p_num end
             local user_label = device:get_data(string.lower(preset_id) .. "_label") or preset_id
             print("BM8000: Tuning to " .. user_label .. " (" .. preset_id .. ")")
             send_ir(ir_payload)
         else
-            print("⚠️ ERROR: Preset " .. (params.value or "nil") .. " not mapped.")
+            print("⚠️ ERROR: Preset not mapped.")
         end
         
-    elseif res_id == "bm8000_filter" then 
-        send_ir(IR_BM8000_FILTER)
+    elseif res_id == "bm8000_filter" then send_ir(IR_BM8000_FILTER)
     
-    elseif res_id == "playlist_selector" then
-        local id = favorites_map[params.value]
-        if id then http.get("http://"..CORE_IP..":15081/favourites/"..id.."?cmd=play") end
+    -- DYNAMIC PLAYLISTS
+    elseif cmd_id == "play_naim_playlist" then
+        local pl_address = device:get_resource_data(res_id, "playlist_address")
+        if CURRENT_SOURCE == "Naim Core" then
+            print("▶️ Playing Naim Playlist ID: " .. tostring(pl_address))
+            http.get("http://"..CORE_IP..":15081/favourites/" .. pl_address .. "?cmd=play")
+        else
+            print("⚠️ Ignored: Naim Playlists are only accessible when the 'Naim Core' source is active.")
+        end
 
+    elseif cmd_id == "play_bo_playlist" then
+        local tidal_url = device:get_resource_data(res_id, "playlist_address")
+        if CURRENT_SOURCE == "B&O Streaming" then
+            print("▶️ Playing B&O Playlist: " .. tostring(tidal_url))
+            engine.fire(primary_core .. "/Play URI?URI=" .. tostring(tidal_url), {})
+        else
+            print("⚠️ Ignored: B&O Playlists are only accessible when the 'B&O Streaming' source is active.")
+        end
+
+    -- BROWSE & SEARCH
     elseif cmd_id == "browse" then
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Browse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ObjectID>]]..(params.container_id or "0")..[[</ObjectID><BrowseFlag>BrowseDirectChildren</BrowseFlag><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Browse></s:Body></s:Envelope>]]
-        -- FIXED: Changed AVTransport to ContentDirectory in the SOAPACTION header
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Browse"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
 
     elseif cmd_id == "search" then
@@ -314,11 +314,11 @@ function on_resource_command(res_id, cmd_id, params)
         local soap = [[<s:Envelope xmlns:s="http://schemas.xmlsoap.org"><s:Body><u:Search xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1"><ContainerID>0</ContainerID><SearchCriteria>]]..criteria..[[</SearchCriteria><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>50</RequestedCount><SortCriteria></SortCriteria></u:Search></s:Body></s:Envelope>]]
         http.request(url, {method="POST", body=soap, headers={["SOAPACTION"]='"urn:schemas-upnp-org:service:ContentDirectory:1#Search"', ["Content-Type"]="text/xml"}}, function(res) device:send_content_results(res.body) end)
     
--- HOUSE PARTY MODE
+    -- HOUSE PARTY MODE
     elseif res_id == "party_mode" then
         if cmd_id == "set" then
             local is_active = (params.state == true or params.state == "ON" or params.state == "on")
-            local party_zones = get_party_zones() -- Dynamically fetch the array of secondary zones
+            local party_zones = get_party_zones() 
             
             if is_active then
                 if CURRENT_SOURCE == "Naim Core" then
@@ -331,12 +331,10 @@ function on_resource_command(res_id, cmd_id, params)
                 
                 print("📡 Distributing to secondary zones...")
                 for _, z in ipairs(party_zones) do
-                    -- We directly append the command to the user-defined resource path
                     engine.fire(z .. "/Send command?Command=JOIN", {})
                 end
             else
                 print("🛑 House Party Mode OFF: Isolating Living Room...")
-                
                 for _, z in ipairs(party_zones) do
                     engine.fire(z .. "/Send command?Command=STANDBY", {})
                 end
@@ -346,11 +344,10 @@ function on_resource_command(res_id, cmd_id, params)
                 end
             end
         end
-    end
-
+    end 
 end 
 
--- 7. DISCOVERY
+-- 8. DISCOVERY PORT MAPPING
 function discover_upnp_port()
     local msearch = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nST: urn:schemas-upnp-org:service:AVTransport:1\r\nMAN: \"ssdp:discover\"\r\nMX: 3\r\n\r\n"
     local socket = udp.new()
@@ -363,60 +360,65 @@ function discover_upnp_port()
     end)
 end
 
--- 8. DIAGNOSTIC SCRIPT BLOCK
+-- 9. RESOURCE CAPTURE (Dynamic Naim Playlists)
+function discover_resources()
+    print("🔍 Discovering Naim Playlists...")
+    local url = "http://" .. CORE_IP .. ":15081/favourites"
+    
+    http.get(url, function(res, err)
+        if not err and res.body then
+            local status, data = pcall(json.decode, res.body)
+            if status and type(data) == "table" then
+                for _, item in ipairs(data) do
+                    local id = tostring(item.id or "")
+                    local name = item.title or item.name or ("Naim Playlist " .. id) 
+                    
+                    if id ~= "" then
+                        device:add_discovered_resource("naim_playlist", "naim_" .. id, name, { playlist_address = id })
+                    end
+                end
+                print("✅ Discovery Complete: Found " .. #data .. " playlists.")
+            end
+        else
+            print("❌ Discovery failed: Naim Core unreachable on port 15081.")
+        end
+    end)
+end
+
+-- 10. DIAGNOSTIC TEST BLOCK
 function run_full_system_test()
     print("--- 🚀 STARTING FULL HYBRID SYSTEM DIAGNOSTICS ---")
 
-    -- 1. Verify Naim Connectivity (Transport & Metadata)
     http.get("http://" .. CORE_IP .. ":15081/nowplaying", function(res, err)
-        if not err then 
-            print("✅ PASS: Naim REST API (Port 15081) is responding.")
-        else 
-            print("❌ FAIL: Naim REST API unreachable. Check Power/Network.")
-        end
+        if not err then print("✅ PASS: Naim REST API (Port 15081) is responding.")
+        else print("❌ FAIL: Naim REST API unreachable. Check Power/Network.") end
     end)
 
     local upnp_port = device:get_data("upnp_port") or "16000"
     http.get("http://" .. CORE_IP .. ":" .. upnp_port .. "/xml/AVTransport", function(res, err)
-        if not err then 
-            print("✅ PASS: Naim WAV Metadata (Port " .. upnp_port .. ") is active.")
-        else 
-            print("❌ FAIL: UPnP Port not discovered. SSDP might be blocked.")
-        end
+        if not err then print("✅ PASS: Naim WAV Metadata (Port " .. upnp_port .. ") is active.")
+        else print("❌ FAIL: UPnP Port not discovered. SSDP might be blocked.") end
     end)
 
-    -- 2. Verify iTach Connectivity (Preamps & Vintage)
     local ITACH_IP = get_itach_ip()
     local client = tcp.new()
     client:connect(ITACH_IP, 4998, function(res, err)
-        if not err then 
-            print("✅ PASS: Global Caché iTach (" .. ITACH_IP .. ") is online.")
-            client:close()
-        else 
-            print("❌ FAIL: iTach unreachable. Check IP in BLI Resource Data.")
-        end
+        if not err then print("✅ PASS: Global Caché iTach (" .. ITACH_IP .. ") is online.") client:close()
+        else print("❌ FAIL: iTach unreachable. Check IP in BLI Resource Data.") end
     end)
 
-    -- 3. Verify B&O Multiroom Targets
     local primary_core = get_primary_core()
-    if engine.resource(primary_core) then
-        print("✅ PASS: Primary Core found at: " .. primary_core)
-    else
-        print("⚠️ WARNING: Primary Core not found. Check parameter path: " .. primary_core)
-    end
+    if engine.resource(primary_core) then print("✅ PASS: Primary Core found at: " .. primary_core)
+    else print("⚠️ WARNING: Primary Core not found. Check parameter path: " .. primary_core) end
 
     local party_zones = get_party_zones()
     if #party_zones == 0 then
         print("⚠️ WARNING: No secondary Party Zones configured in BLI parameters.")
     else
         for _, z in ipairs(party_zones) do
-            if engine.resource(z) then
-                print("✅ PASS: Secondary Zone found at: " .. z)
-            else
-                print("⚠️ WARNING: Secondary Zone not found. Check parameter path: " .. z)
-            end
+            if engine.resource(z) then print("✅ PASS: Secondary Zone found at: " .. z)
+            else print("⚠️ WARNING: Secondary Zone not found. Check parameter path: " .. z) end
         end
     end
-    
     print("--- 🏁 DIAGNOSTICS COMPLETE ---")
 end
