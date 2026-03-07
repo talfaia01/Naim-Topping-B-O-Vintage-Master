@@ -289,8 +289,8 @@ function on_resource_command(res_id, cmd_id, params)
     elseif cmd_id == "play_naim_playlist" then
         local pl_address = device:get_resource_data(res_id, "playlist_address")
         if CURRENT_SOURCE == "Naim Core" then
-            print("▶️ Playing Naim Playlist ID: " .. tostring(pl_address))
-            http.get("http://"..CORE_IP..":15081/favourites/" .. pl_address .. "?cmd=play")
+            print("▶️ Playing Naim Playlist: " .. tostring(pl_address))
+            http.get("http://"..CORE_IP..":15081/" .. pl_address .. "?cmd=play")
         else
             print("⚠️ Ignored: Naim Playlists are only accessible when the 'Naim Core' source is active.")
         end
@@ -363,21 +363,23 @@ end
 -- 9. RESOURCE CAPTURE (Dynamic Naim Playlists)
 function discover_resources()
     print("🔍 Discovering Naim Playlists...")
-    local url = "http://" .. CORE_IP .. ":15081/favourites"
+    local url = "http://" .. CORE_IP .. ":15081/playlists"
     
     http.get(url, function(res, err)
         if not err and res.body then
             local status, data = pcall(json.decode, res.body)
-            if status and type(data) == "table" then
-                for _, item in ipairs(data) do
-                    local id = tostring(item.id or "")
-                    local name = item.title or item.name or ("Naim Playlist " .. id) 
+            if status and type(data) == "table" and data.children then
+                for _, item in ipairs(data.children) do
+                    local ussi = tostring(item.ussi or "")
+                    local name = item.name or "Naim Playlist" 
                     
-                    if id ~= "" then
-                        device:add_discovered_resource("naim_playlist", "naim_" .. id, name, { playlist_address = id })
+                    if ussi ~= "" then
+                        -- Generate a safe resource ID by replacing slashes with underscores
+                        local safe_id = ussi:gsub("/", "_")
+                        device:add_discovered_resource("naim_playlist", safe_id, name, { playlist_address = ussi })
                     end
                 end
-                print("✅ Discovery Complete: Found " .. #data .. " playlists.")
+                print("✅ Discovery Complete: Found " .. #data.children .. " playlists.")
             end
         else
             print("❌ Discovery failed: Naim Core unreachable on port 15081.")
