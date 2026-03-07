@@ -195,7 +195,8 @@ function on_resource_command(res_id, cmd_id, params)
         if params.value == "Naim Core" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_AES)
-            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
+            -- 🚨 PATCHED: Replaced play with resume so it doesn't restart tracks
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
@@ -250,7 +251,8 @@ function on_resource_command(res_id, cmd_id, params)
     -- PLAY/PAUSE
     elseif cmd_id == "play" then
         if CURRENT_SOURCE == "Naim Core" then 
-            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
+            -- 🚨 PATCHED: Replaced play with resume
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
         elseif CURRENT_SOURCE == "B&O Streaming" then 
             engine.fire(primary_core .. "/Send command?Command=PLAY&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" then 
@@ -290,7 +292,8 @@ function on_resource_command(res_id, cmd_id, params)
         local pl_address = device:get_resource_data(res_id, "playlist_address")
         if CURRENT_SOURCE == "Naim Core" then
             print("▶️ Playing Naim Playlist: " .. tostring(pl_address))
-            http.get("http://"..CORE_IP..":15081/" .. pl_address .. "?cmd=play")
+            -- 🚨 PATCHED: Targets the /favourites endpoint instead of raw playlists
+            http.get("http://"..CORE_IP..":15081/favourites/" .. pl_address .. "?cmd=play")
         else
             print("⚠️ Ignored: Naim Playlists are only accessible when the 'Naim Core' source is active.")
         end
@@ -360,26 +363,37 @@ function discover_upnp_port()
     end)
 end
 
--- 9. RESOURCE CAPTURE (Dynamic Naim Playlists)
+-- 9. RESOURCE CAPTURE (Dynamic Naim Favorites)
 function discover_resources()
-    print("🔍 Discovering Naim Playlists...")
-    local url = "http://" .. CORE_IP .. ":15081/playlists"
+    print("🔍 Discovering Naim Favorites...")
+    -- 🚨 PATCHED: Targeting favourites endpoint
+    local url = "http://" .. CORE_IP .. ":15081/favourites"
     
     http.get(url, function(res, err)
         if not err and res.body then
             local status, data = pcall(json.decode, res.body)
-            if status and type(data) == "table" and data.children then
-                for _, item in ipairs(data.children) do
-                    local ussi = tostring(item.ussi or "")
-                    local name = item.name or "Naim Playlist" 
-                    
-                    if ussi ~= "" then
-                        -- Generate a safe resource ID by replacing slashes with underscores
-                        local safe_id = ussi:gsub("/", "_")
-                        device:add_discovered_resource("naim_playlist", safe_id, name, { playlist_address = ussi })
+            if status and type(data) == "table" then
+                -- Accommodate Naim's JSON structure
+                local items = data.children or data 
+                
+                if items and #items > 0 then
+                    for _, item in ipairs(items) do
+                        local item_id = item.id
+                        if not item_id and item.ussi then
+                            item_id = item.ussi:match("([^/]+)$")
+                        end
+                        
+                        local name = item.name or item.title or ("Naim Favorite " .. tostring(item_id))
+                        
+                        if item_id and item_id ~= "" then
+                            -- Registering as 'naim_playlist' so it maps exactly to your manifest params
+                            device:add_discovered_resource("naim_playlist", "naim_" .. item_id, name, { playlist_address = item_id })
+                        end
                     end
+                    print("✅ Discovery Complete: Found " .. #items .. " favorites.")
+                else
+                    print("⚠️ No favorites found. Ensure you have 'Starred' the new Album folder in the Naim App.")
                 end
-                print("✅ Discovery Complete: Found " .. #data.children .. " playlists.")
             end
         else
             print("❌ Discovery failed: Naim Core unreachable on port 15081.")
