@@ -138,7 +138,11 @@ function heartbeat_and_status()
             device:set_state("ONLINE_STATUS", "ONLINE")
             local status, d = pcall(json.decode, res.body)
             if status and d then
-                local state = (d.transportState == "2") and "PLAYING" or (d.transportState == "3" and "PAUSED" or "STOPPED")
+                local state = "STOPPED"
+                if d.transportState == "2" then state = "PLAYING"
+                elseif d.transportState == "1" then state = "PAUSED"
+                elseif d.transportState == "3" then state = "BUFFERING" end
+                
                 device:set_state("TRANSPORT_STATE", state)
                 if d.sampleRate and d.bitDepth then
                     device:set_state("AUDIO_QUALITY", string.format("%.1f kHz / %sb", d.sampleRate/1000, d.bitDepth))
@@ -309,6 +313,13 @@ function on_resource_command(res_id, cmd_id, params)
             engine.fire(primary_core .. "/Send command?Command=PAUSE&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" or CURRENT_SOURCE == "Beogram Vinyl" or CURRENT_SOURCE == "FM Radio" then 
             send_ir(IR_BM8000_STOP) 
+        end
+        
+    -- PLAY/PAUSE TOGGLE
+    elseif cmd_id == "play_pause_toggle" then
+        if CURRENT_SOURCE == "Naim Core" then
+            print("⏯️ Toggling Naim Play/Pause...")
+            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=playpause")
         end
         
     -- TOPPING/BM8000 SELECTORS
