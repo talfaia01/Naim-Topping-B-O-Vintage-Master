@@ -79,6 +79,7 @@
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
     { "id": "pause", "name": "Pause", "type": "button" },
+    { "id": "play_pause_toggle", "name": "Play/Pause Toggle", "type": "button" },
     { "id": "next", "name": "Next Track", "type": "button" },
     { "id": "prev", "name": "Prev Track", "type": "button" },
     { "id": "search_fwd", "name": "Forward >>", "type": "button" },
@@ -120,7 +121,7 @@
     { "id": "AUDIO_QUALITY", "type": "string" },
     { "id": "TRACK_PROGRESS", "type": "integer" },
     { "id": "TRACK_DURATION", "type": "integer" },
-    { "id": "TRANSPORT_STATE", "type": "enum", "values": ["PLAYING", "PAUSED", "STOPPED"] },
+    { "id": "TRANSPORT_STATE", "type": "enum", "values": ["PLAYING", "PAUSED", "STOPPED", "BUFFERING"] },
     { "id": "ONLINE_STATUS", "type": "enum", "values": ["ONLINE", "OFFLINE"] },
     { "id": "VOLUME", "type": "integer", "min": 0, "max": 100 }
   ],
