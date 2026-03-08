@@ -74,6 +74,27 @@
       "commands": [
         { "id": "play_bo_playlist", "name": "Play Playlist" }
       ]
+    },
+    {
+      "name": "NAIM_POWER",
+      "description": "Discrete power control for the Uniti Core",
+      "arguments": [
+        { "name": "state", "type": "STRING", "description": "ON or STANDBY" }
+      ]
+    },
+    {
+      "name": "SHUFFLE",
+      "description": "Toggle Naim Shuffle Mode",
+      "arguments": [
+        { "name": "mode", "type": "STRING", "description": "1 for ON, 0 for OFF" }
+      ]
+    },
+    {
+      "name": "REPEAT",
+      "description": "Toggle Naim Repeat Mode",
+      "arguments": [
+        { "name": "mode", "type": "STRING", "description": "0=OFF, 1=ONE, 2=ALL" }
+      ]
     }
   ],
   "resources": [
