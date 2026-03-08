@@ -244,6 +244,32 @@ function on_resource_command(res_id, cmd_id, params)
             send_ir(IR_BM8000_KEYS[target_preset])
         end
 
+    -- NAIM POWER CONTROL
+    elseif cmd_id == "NAIM_POWER" then
+        local pwr_state = params.state
+        if pwr_state == "ON" then
+            print("⚡ Waking Naim Core...")
+            http.request("http://" .. CORE_IP .. ":15081/power?system=on", {method="PUT"})
+        elseif pwr_state == "STANDBY" then
+            print("💤 Naim Core to Low Power Standby...")
+            http.request("http://" .. CORE_IP .. ":15081/power?system=lona", {method="PUT"})
+        end
+
+    -- SHUFFLE & REPEAT (Naim Core)
+    elseif cmd_id == "SHUFFLE" then
+        if CURRENT_SOURCE == "Naim Core" then
+            local s_mode = params.mode or "1"
+            print("🔀 Setting Naim Shuffle to: " .. s_mode)
+            http.request("http://" .. CORE_IP .. ":15081/nowplaying?shuffle=" .. s_mode, {method="PUT"})
+        end
+
+    elseif cmd_id == "REPEAT" then
+        if CURRENT_SOURCE == "Naim Core" then
+            local r_mode = params.mode or "2" -- Default to 'Repeat All'
+            print("🔁 Setting Naim Repeat to: " .. r_mode)
+            http.request("http://" .. CORE_IP .. ":15081/nowplaying?repeat=" .. r_mode, {method="PUT"})
+        end
+        
     -- TUNING BRIDGE (BM8000 Settings)
     elseif cmd_id == "step_fwd" then send_ir(IR_BM8000_FINE_UP)
     elseif cmd_id == "step_rev" then send_ir(IR_BM8000_FINE_DN)
