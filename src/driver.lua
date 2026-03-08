@@ -195,8 +195,14 @@ function on_resource_command(res_id, cmd_id, params)
         if params.value == "Naim Core" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_AES)
-            -- 🚨 PATCHED: Replaced play with resume so it doesn't restart tracks
-            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
+            print("⚡ Waking Naim Core (Source Selected)...")
+            http.request("http://" .. CORE_IP .. ":15081/power?system=on", {method="PUT"})
+            
+            -- Intelligent Play/Resume fallback
+            local current_state = device:get_state("TRANSPORT_STATE") or "STOPPED"
+            if current_state == "PAUSED" then
+                http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
+            end
         elseif params.value == "B&O Streaming" then
             send_ir(IR_A90_XLR)
             send_ir(IR_D90_OPT)
@@ -274,11 +280,22 @@ function on_resource_command(res_id, cmd_id, params)
     elseif cmd_id == "step_fwd" then send_ir(IR_BM8000_FINE_UP)
     elseif cmd_id == "step_rev" then send_ir(IR_BM8000_FINE_DN)
 
-    -- PLAY/PAUSE
+    -- PLAY/PAUSE (Intelligent State Parsing)
     elseif cmd_id == "play" then
         if CURRENT_SOURCE == "Naim Core" then 
-            -- 🚨 PATCHED: Replaced play with resume
-            http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
+            print("⚡ Waking Naim Core and evaluating play state...")
+            http.request("http://" .. CORE_IP .. ":15081/power?system=on", {method="PUT"})
+            
+            -- Read current state directly from memory
+            local current_state = device:get_state("TRANSPORT_STATE") or "STOPPED"
+            
+            if current_state == "PAUSED" then
+                print("▶️ Resuming paused track...")
+                http.get("http://"..CORE_IP..":15081/nowplaying?cmd=resume")
+            else
+                print("▶️ Starting new playback...")
+                http.get("http://"..CORE_IP..":15081/nowplaying?cmd=play")
+            end
         elseif CURRENT_SOURCE == "B&O Streaming" then 
             engine.fire(primary_core .. "/Send command?Command=PLAY&Continue type=short_press", {})
         elseif CURRENT_SOURCE == "Beocord Tape" then 
@@ -318,7 +335,6 @@ function on_resource_command(res_id, cmd_id, params)
         local pl_address = device:get_resource_data(res_id, "playlist_address")
         if CURRENT_SOURCE == "Naim Core" then
             print("▶️ Playing Naim Playlist: " .. tostring(pl_address))
-            -- 🚨 PATCHED: Targets the /favourites endpoint instead of raw playlists
             http.get("http://"..CORE_IP..":15081/favourites/" .. pl_address .. "?cmd=play")
         else
             print("⚠️ Ignored: Naim Playlists are only accessible when the 'Naim Core' source is active.")
@@ -392,14 +408,12 @@ end
 -- 9. RESOURCE CAPTURE (Dynamic Naim Favorites)
 function discover_resources()
     print("🔍 Discovering Naim Favorites...")
-    -- 🚨 PATCHED: Targeting favourites endpoint
     local url = "http://" .. CORE_IP .. ":15081/favourites"
     
     http.get(url, function(res, err)
         if not err and res.body then
             local status, data = pcall(json.decode, res.body)
             if status and type(data) == "table" then
-                -- Accommodate Naim's JSON structure
                 local items = data.children or data 
                 
                 if items and #items > 0 then
@@ -412,7 +426,6 @@ function discover_resources()
                         local name = item.name or item.title or ("Naim Favorite " .. tostring(item_id))
                         
                         if item_id and item_id ~= "" then
-                            -- Registering as 'naim_playlist' so it maps exactly to your manifest params
                             device:add_discovered_resource("naim_playlist", "naim_" .. item_id, name, { playlist_address = item_id })
                         end
                     end
