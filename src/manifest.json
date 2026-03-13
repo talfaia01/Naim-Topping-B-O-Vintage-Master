@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0",
+  "version": "3.8.0",
   "type": "media_renderer",
   "name": "Naim-Topping-Vintage Master",
   "description": "Gen 3 Multi-Protocol Driver: Naim WAV, Topping Stack, BM8000 Datalink",
@@ -24,24 +24,27 @@
       "id": "primary_core_path",
       "name": "Living Room Core Path",
       "type": "string",
-      "description": "Enter the exact BLI resource path for the main broadcaster",
+      "description": "Enter the exact BLI resource path for the main broadcaster (e.g., Main/Living Room/AV renderer/BS Core 5)",
       "required": true
     },
     {
       "id": "party_zone_paths",
       "name": "Party Zone Paths",
       "type": "string",
-      "description": "Enter comma-separated paths for the secondary zones",
+      "description": "Enter comma-separated paths for the secondary zones (e.g., Kitchen/AV renderer/BS_Core, Bedroom/AV renderer/BS_Core)",
       "required": false
     },
-    {
-      "id": "run_diag_on_boot",
-      "name": "Run Diagnostics on Startup",
-      "type": "boolean",
-      "default": false
-    },
+    { "id": "run_diag_on_boot", "name": "Run Diagnostics on Startup", "type": "boolean", "default": false, "description": "Check this box to automatically run the diagnostic script in the system log whenever this driver starts." },
     { "id": "p1_label", "name": "Preset 1 Name", "type": "string", "default": "P1" },
-    { "id": "p2_label", "name": "Preset 2 Name", "type": "string", "default": "P2" }
+    { "id": "p2_label", "name": "Preset 2 Name", "type": "string", "default": "P2" },
+    { "id": "p3_label", "name": "Preset 3 Name", "type": "string", "default": "P3" },
+    { "id": "p4_label", "name": "Preset 4 Name", "type": "string", "default": "P4" },
+    { "id": "p5_label", "name": "Preset 5 Name", "type": "string", "default": "P5" },
+    { "id": "p6_label", "name": "Preset 6 Name", "type": "string", "default": "P6" },
+    { "id": "p7_label", "name": "Preset 7 Name", "type": "string", "default": "P7" },
+    { "id": "p8_label", "name": "Preset 8 Name", "type": "string", "default": "P8" },
+    { "id": "p9_label", "name": "Preset 9 Name", "type": "string", "default": "P9" },
+    { "id": "p0_label", "name": "Preset 0 Name", "type": "string", "default": "P0" }
   ],
   "resource_types": [
     {
@@ -59,6 +62,7 @@
   "resources": [
     { "id": "play", "name": "Play", "type": "button" },
     { "id": "pause", "name": "Pause", "type": "button" },
+    { "id": "stop", "name": "Stop", "type": "button" },
     { "id": "play_pause_toggle", "name": "Play/Pause Toggle", "type": "button" },
     { "id": "mute", "name": "Mute Toggle", "type": "button" },
     { "id": "next", "name": "Next Track", "type": "button" },
@@ -68,10 +72,11 @@
     { "id": "step_fwd", "name": "Balance >", "type": "button" },
     { "id": "step_rev", "name": "Balance <", "type": "button" },
     { "id": "party_mode", "name": "House Party Mode", "type": "switch" },
-    { "id": "bm8000_filter", "name": "BM8000 Filter", "type": "switch" },
+    { "id": "bm8000_filter", "name": "BM8000 Filter", "type": "button" },
     { "id": "d90_fir", "name": "D90 FIR Filter", "type": "button" },
     { "id": "d90_input_next", "name": "D90 Input >>", "type": "button" },
     { "id": "d90_input_prev", "name": "D90 Input <<", "type": "button" },
+    { "id": "a90_power", "name": "A90 Power Toggle", "type": "button" },
     { "id": "run_diagnostics", "name": "Run Diagnostics Now", "type": "button" },
     {
       "id": "source_selector",
@@ -107,7 +112,8 @@
     { "id": "TRACK_DURATION", "type": "integer" },
     { "id": "TRANSPORT_STATE", "type": "enum", "values": ["PLAYING", "PAUSED", "STOPPED", "BUFFERING"] },
     { "id": "ONLINE_STATUS", "type": "enum", "values": ["ONLINE", "OFFLINE"] },
-    { "id": "VOLUME", "type": "integer", "min": 0, "max": 100 }
+    { "id": "VOLUME", "type": "integer", "min": 0, "max": 100 },
+    { "id": "MUTE", "type": "boolean" }
   ],
   "commands": [
     {
