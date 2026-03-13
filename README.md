@@ -1,80 +1,75 @@
-# Naim-Topping-B&O Vintage Hybrid System Controller
-### 🚀 Optimized for Beoliving Intelligence (Gen 3)
+# Naim-Topping-B&O Vintage Master Driver for BeoLiving Intelligence
+**Version:** 3.8.0  
+**Type:** Media Renderer / Multi-Protocol Custom Driver  
 
-This repository contains the professional-grade, multi-protocol driver for the **Beoliving Intelligence (Generation 3)**. It enables seamless control of a "Triple-Hybrid" audiophile ecosystem, bridging 1980s analog engineering with modern 24-bit/192kHz digital processing.
+This BeoLiving Intelligence (BLI) driver bridges modern audiophile digital streaming with vintage analog B&O hardware. It seamlessly integrates a Naim Uniti Core, a Topping D90/A90 Discrete stack, and a vintage Beomaster 8000 into a unified, single-interface control system.
 
----
+## 🏗️ System Architecture & IR Routing
+This driver utilizes a combination of REST API commands, UPnP XML parsing, and raw hexadecimal IR pulses routed through a Global Caché iTach adapter.
 
-## 🏗 System Architecture
-The system integrates three distinct generations of technology into a unified Bang & Olufsen user experience:
+### iTach Port Mapping
+For the driver to function correctly, your IR emitters must be plugged into the following ports on your iTach device:
+* **Port 1:1 - Topping D90 DAC:** Uses the RC-15A protocol (`0x11EE` header). 
+* **Port 1:2 - Topping A90 Discrete Pre-Amp:** Uses the RC-16A protocol (`0x5AA5` header). Requires a 300ms "Wake" pulse prior to execution to bypass the OLED screen saver.
+* **Port 1:3 - Beomaster 8000:** Uses the custom 40.9 kHz B&O Datalink IR protocol.
 
-1.  **Digital Transport:** [Naim Uniti Core](https://www.naimaudio.com) serving bit-perfect **WAV rips** via BNC/AES.
-2.  **Conversion & Preamp:** [Topping D90 DAC](https://www.tpdz.net) and [Topping A90 Discrete](https://www.tpdz.net) managed via [Global Caché iTach IP2IR](https://www.globalcache.com).
-3.  **Vintage Analog:** [Beomaster 8000](https://beoworld.org) stack (Beogram 8002/Beocord 8004) controlled via the same unique unique 8-bit **40.983 kHz infrared protocol** as the original [Beolab Terminal](https://beoworld.org/beolab-terminal-remote-controller/) Remote Controller.
-4.  **Whole-Home Distribution:** Living Room fixed RCA path distributed to 5x Beosound Cores, Beosystem 4, and Beosound Stage.
-
-## 🌐 Signal Path & Logic Map
-
-This system utilizes a **Dual-Path Hybrid Architecture** to maintain bit-perfect audiophile integrity while enabling high-resolution whole-home distribution.
-
-### 1. Primary Digital Path ("Naim Core" Source)
-*   **Path:** [Naim Uniti Core](https://www.naimaudio.com) (BNC) → [Topping D90 DAC](https://www.tpdz.net) (AES).
-*   **Performance:** Handles 24-bit/192kHz bit-perfect WAV rips for critical listening.
-
-### 2. Secondary Streaming Path ("B&O Streaming" Source)
-*   **Path:** [Beosound Core](https://www.bang-olufsen.com) (Optical) → Topping D90 DAC (Optical).
-*   **Performance:** Integrates B&O Radio and Tidal directly into the Topping stack via a galvanic-isolated digital link.
-
-### 3. Analog Path ("Vintage" Sources)
-*   **Path:** [Beomaster 8000](https://beoworld.org) (RCA) → [Topping A90 Discrete](https://www.tpdz.net) (RCA).
-*   **Performance:** Pure analog signal path for Vinyl (8002), Tape (8004), and FM Tuner.
-
-### 4. Whole-Home Distribution Path
-*   **Path:** Topping D90 (RCA Fixed) → Beosound Core (Line-In).
-*   **Function:** This "loops" the Naim's decoded analog signal back into the B&O Network Link.
-*   **Multiroom:** Allows any of the 5 secondary Cores or the Home Theater to "Join" the Naim stream without affecting the Living Room volume.
+*Note: Because the D90 and A90 Discrete use completely different IR address headers, you do not need to worry about IR command cross-contamination between the two units.*
 
 ---
 
-## ✨ Key Features
+## ⚙️ Hardware Pre-Requisites (CRITICAL)
 
-### 🔍 WAV Metadata & Search
-*   **Proprietary WAV Parsing:** Native extraction of Naim metadata/artwork via **Port 16000 (UPnP)**.
-*   **Halo Progress Sync:** Real-time track progress and duration displayed on the [BeoRemote Halo](https://www.bang-olufsen.com).
-*   **Library Search:** Integrated `media_search` capability for the internal Naim WAV database.
+Before loading this driver into the BeoLiving Intelligence, you must configure your physical Topping hardware to support the automation logic:
 
-### 🛡 Volume Safety & Sync
-*   **Zero-Sync Logic:** A unique `reset_a90_hardware()` function toggles preamp inputs to trigger the A90’s internal **Safe Volume** reset, ensuring the digital app slider and analog relays are perfectly aligned at 0.
-*   **Safety Governor:** Hard-coded `SAFE_VOL_LIMIT = 60` to protect BeoLab speakers from gain spikes.
+### 1. Topping A90 Discrete: Save Inputs to Memory
+The Topping RC-16A remote only possesses sequential Left/Right input arrows, which are unreliable for automation. This driver bypasses this by utilizing the custom `C1` and `C2` memory buttons.
+1. Use the physical knob on the A90 Discrete to select the **XLR** input.
+2. Press and hold the **C1** button on your physical remote until the screen flashes.
+3. Switch the A90 input to **RCA**, and press and hold **C2** to save it.
 
-### 📼 Vintage Datalink Bridge
-*   **40.983 kHz Control:** Targeted IR bursts simulate the [Beolab Terminal]([https://beoworld.org](https://beoworld.org/beolab-terminal-remote-controller/) to automate the Beomaster 8000.
-*   **Automation:** Triggering "Phono" on the app automatically starts the Beogram 8002 turntable arm.
+### 2. Topping D90 DAC: Enable Auto-Power
+To prevent input de-syncing, this driver relies on the D90's native hardware logic to detect the active digital audio stream.
+1. Press the **AUTO** button on your RC-15A remote until the D90 screen reads **"Auto On"** (or toggle "Auto Power" to ON in the D90's hidden boot menu).
+2. The D90 will now automatically wake and lock onto the correct digital input whenever the Naim Uniti Core or B&O Streamer begins playing.
 
 ---
 
-## 🛠 Hardware Calibration, Safety & Final Setup
+## 🛠️ BLI Parameter Configuration
 
-To ensure **Hardware Safety** as well as the **Distribution Path** (Naim → House) and **Source Switching** are seamless, follow these hardware calibration steps:
+When adding this resource to your BeoLiving Intelligence, configure the following parameters:
 
-### 1. Topping A90 Discrete Settings
-To ensure the "Zero-Sync" volume logic functions correctly, the A90 Discrete must be configured as follows:
-*   **Safe Volume Mode (SAFE):** Set to **ON**.
-*   **Safe Volume Level:** Set to **0** (or -99dB).
-    *   *Logic:* Toggling inputs via the BLI forces the A90 to this 'Anchor' level, allowing the driver to perfectly sync the digital slider with the analog relays.
-*   **Volume Step:** Set to **1.0dB**.
+| Parameter | Description | Required |
+| :--- | :--- | :--- |
+| **iTach IP Address** | The local IP address of your Global Caché iTach (e.g., `192.168.77.XXX`). | Yes |
+| **Living Room Core Path** | The exact BLI resource path for your primary B&O Core (e.g., `Main/Living Room/AV renderer/BS Core 5`). | Yes |
+| **Party Zone Paths** | Comma-separated BLI paths for secondary B&O zones you want to join during "House Party Mode". | No |
+| **Run Diagnostics** | If checked, the driver will automatically test Naim APIs and iTach pings on system boot. | No |
+| **P1 - P0 Labels** | Custom display names for your Beomaster 8000 FM Radio presets (e.g., "93.3 WMMR"). These will print to the system log when selected from the UI dropdown. | No |
 
-### 2. Beosound Core (Living Room) - "The Hub"
-*   **Line-In Sensitivity:** In the B&O App, set to **"High"**. This ensures the fixed-level RCA signal from the Topping D90 is robust enough for the secondary rooms.
-*   **Line-In Fix Volume:** Set to **"Enabled/Fixed"**.
-*   **Line-In Sense:** Set to **"Disabled"** (The BLI Gen 3 handles all switching logic).
+---
 
-### 3. Topping D90 DAC
-*   **Output Mode:** Must be set to **"XLR + RCA"** (simultaneous).
-*   **Bluetooth:** Disable to prevent interference with the iTach IR signal.
+## 🎛️ Supported Features & UI Controls
 
-### 4. Beomaster 8000
-*   **Safe Startup:** Ensure the BM8000 internal "Start Volume" is set to a moderate level (e.g., 3.0) to match the gain of your digital sources.
+**Naim Uniti Core Integration**
+* **Instant Transport Controls:** Play, Pause, Next Track, Prev Track, Repeat, and Shuffle via Port 15081 REST API.
+* **Now Playing Metadata:** High-resolution album art, track title, artist name, and track progress parsed natively via UPnP XML SOAP envelopes.
+* **Audio Quality Polling:** Live reporting of bit-depth and sample rate (e.g., `44.1 kHz / 16b`).
+* *Note: Direct playlist/album REST triggering is deprecated due to Naim firmware restrictions. Users should use the Focal & Naim app to queue music.*
+
+**Topping Stack Control**
+* **A90 Discrete Volume:** Hardware-synced volume ramping with intelligent "Wake" pulse logic.
+* **A90 Output & Gain:** Discrete toggles for PRE (Speakers), HPA (Headphones), or HPA+PRE, plus High/Low Gain switching.
+* **A90 Mute & Power:** Instant discrete toggles.
+* **D90 FIR Filter:** On-the-fly toggling of the DAC's digital roll-off curves.
+* **D90 Input Fallback:** Manual `>>` and `<<` buttons if the Auto-Sense feature requires nudging.
+
+**Vintage Beomaster 8000 Routing**
+* **Source Selection:** Seamless switching between Beogram Vinyl, Beocord Tape, and FM Radio.
+* **FM Radio:** Scan Up/Down, Fine Tune Balance (`>`/`<`), and Filter toggles.
+* **Preset Tuning:** A clean UI dropdown selector to instantly tune to Presets P1 through P0 (10), utilizing your custom parameter labels.
+
+**House Party Mode**
+* A single UI switch that instantly forces the Naim Uniti Core to broadcast its Line-In, wakes up the BeoLink ecosystem, and distributes the audiophile stream perfectly in-sync to all secondary zones defined in your BLI parameters.
 
 ---
 
