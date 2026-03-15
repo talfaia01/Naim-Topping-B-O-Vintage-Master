@@ -51,14 +51,24 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                     image_bytes = img_file.read()
                 break
 
-    # --- 2. Extract Metadata ---
-    user_data = naim_data.get('user', {})
-    meta_default = naim_data.get('meta', {}).get('default', {})
-    release_data = meta_default.get('release', {})
+    # --- 2. Extract Metadata (Hardened Type-Checking) ---
+    user_data = naim_data.get('user')
+    user_data = user_data if isinstance(user_data, dict) else {}
+
+    meta_block = naim_data.get('meta')
+    meta_block = meta_block if isinstance(meta_block, dict) else {}
+    
+    meta_default = meta_block.get('default')
+    meta_default = meta_default if isinstance(meta_default, dict) else {}
+
+    release_data = meta_default.get('release')
+    release_data = release_data if isinstance(release_data, dict) else {}
 
     album_title = user_data.get('title') or release_data.get('title', 'Unknown Album')
     album_artist = user_data.get('artist') or release_data.get('artistname', 'Unknown Artist')
-    user_tracks_dict = user_data.get('tracks', {})
+    
+    user_tracks_dict = user_data.get('tracks')
+    user_tracks_dict = user_tracks_dict if isinstance(user_tracks_dict, dict) else {}
 
     # --- 3. Create the New Folder Hierarchy ---
     safe_artist = sanitize_filename(album_artist)
@@ -155,8 +165,6 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                 continue
                 
             try:
-                # Only move if the source and destination are actually different 
-                # (prevents errors if running the script on an already-organized folder)
                 if sidecar_path != new_sidecar_path:
                     os.rename(sidecar_path, new_sidecar_path)
                     msg = f"  -> Moved sidecar: {sidecar}"
