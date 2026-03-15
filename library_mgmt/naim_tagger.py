@@ -8,16 +8,17 @@ from mutagen.wave import WAVE
 from mutagen.id3 import TIT2, TPE1, TPE2, TALB, TRCK, APIC
 
 def sanitize_filename(filename):
-    """Removes illegal characters from strings so they can be safely used as filenames."""
-    return re.sub(r'[\\/*?:"<>|]', "", filename)
+    """Removes illegal characters so strings can be used safely as folder or file names."""
+    cleaned = re.sub(r'[\\/*?:"<>|]', "", filename)
+    return cleaned.strip()
 
-def process_naim_directory(directory, dry_run=False):
+def process_naim_directory(directory, root_dir, dry_run=False):
     meta_file = os.path.join(directory, 'meta.naim')
     
     if not os.path.exists(meta_file):
         return
 
-    msg = f"\nProcessing album directory: {directory}"
+    msg = f"\nProcessing Naim directory: {os.path.basename(directory)}"
     print(msg)
     logging.info(msg)
     
@@ -59,7 +60,21 @@ def process_naim_directory(directory, dry_run=False):
     album_artist = user_data.get('artist') or release_data.get('artistname', 'Unknown Artist')
     user_tracks_dict = user_data.get('tracks', {})
 
-    # --- 3. Scan and Map Physical Files ---
+    # --- 3. Create the New Folder Hierarchy ---
+    safe_artist = sanitize_filename(album_artist)
+    safe_album = sanitize_filename(album_title)
+    
+    new_album_dir = os.path.join(root_dir, safe_artist, safe_album)
+    
+    if not dry_run:
+        os.makedirs(new_album_dir, exist_ok=True)
+        if image_bytes:
+            cover_out_path = os.path.join(new_album_dir, 'folder.jpg')
+            if not os.path.exists(cover_out_path):
+                with open(cover_out_path, 'wb') as img_out:
+                    img_out.write(image_bytes)
+
+    # --- 4. Scan and Map Physical Files ---
     wav_files = sorted([f for f in os.listdir(directory) if f.lower().endswith('.wav')])
 
     if not wav_files:
@@ -71,22 +86,22 @@ def process_naim_directory(directory, dry_run=False):
         filepath = os.path.join(directory, filename)
         track_title = user_tracks_dict.get(track_number, f"Track {track_number}")
 
+        safe_title = sanitize_filename(track_title)
+        padded_track = track_number.zfill(2)
+        new_filename = f"{padded_track} - {safe_title}.wav"
+        new_filepath = os.path.join(new_album_dir, new_filename)
+
         if dry_run:
             msg = f"  -> [DRY RUN] Would tag: {filename} | Title: '{track_title}'"
             print(msg)
             logging.info(msg)
             
-            # Show what the rename would look like
-            safe_title = sanitize_filename(track_title)
-            padded_track = track_number.zfill(2)
-            new_filename = f"{padded_track} - {safe_title}.wav"
-            if filename != new_filename:
-                rename_msg = f"  -> [DRY RUN] Would rename to: '{new_filename}'"
-                print(rename_msg)
-                logging.info(rename_msg)
+            rename_msg = f"  -> [DRY RUN] Would move to: {safe_artist}/{safe_album}/{new_filename}"
+            print(rename_msg)
+            logging.info(rename_msg)
             continue
 
-        # --- 4. Apply the ID3 Tags using the WAVE class ---
+        # --- 5. Apply the ID3 Tags ---
         try:
             audio = WAVE(filepath)
             
@@ -111,59 +126,80 @@ def process_naim_directory(directory, dry_run=False):
                 )
 
             audio.save()
-            tag_msg = f"  -> Tagged: {filename} as '{track_title}'"
+            tag_msg = f"  -> Tagged: '{track_title}'"
             print(tag_msg)
             logging.info(tag_msg)
             
-            # --- 5. Rename the physical file ---
-            safe_title = sanitize_filename(track_title)
-            padded_track = track_number.zfill(2) # Ensures '1' becomes '01'
-            new_filename = f"{padded_track} - {safe_title}.wav"
-            new_filepath = os.path.join(directory, new_filename)
-            
-            if filename != new_filename:
-                os.rename(filepath, new_filepath)
-                rename_msg = f"  -> Renamed to: {new_filename}"
-                print(rename_msg)
-                logging.info(rename_msg)
+            # --- 6. Move and Rename the physical file ---
+            os.rename(filepath, new_filepath)
+            rename_msg = f"  -> Moved to: {safe_artist}/{safe_album}/{new_filename}"
+            print(rename_msg)
+            logging.info(rename_msg)
             
         except Exception as e:
-            err_msg = f"Failed to tag or rename {filename} | Error: {e}"
+            err_msg = f"Failed to tag or move {filename} | Error: {e}"
             logging.error(err_msg)
             print(f"  -> [ERROR] {err_msg}")
 
+    # --- 7. Move Naim Sidecar Files ---
+    sidecar_files = ['meta.naim', 'rip.naim']
+    for sidecar in sidecar_files:
+        sidecar_path = os.path.join(directory, sidecar)
+        if os.path.exists(sidecar_path):
+            new_sidecar_path = os.path.join(new_album_dir, sidecar)
+            
+            if dry_run:
+                msg = f"  -> [DRY RUN] Would move sidecar: {sidecar} to {safe_artist}/{safe_album}/"
+                print(msg)
+                logging.info(msg)
+                continue
+                
+            try:
+                # Only move if the source and destination are actually different 
+                # (prevents errors if running the script on an already-organized folder)
+                if sidecar_path != new_sidecar_path:
+                    os.rename(sidecar_path, new_sidecar_path)
+                    msg = f"  -> Moved sidecar: {sidecar}"
+                    print(msg)
+                    logging.info(msg)
+            except Exception as e:
+                err_msg = f"Failed to move sidecar {sidecar} | Error: {e}"
+                logging.error(err_msg)
+                print(f"  -> [ERROR] {err_msg}")
+
 def main():
-    parser = argparse.ArgumentParser(description="Extract Naim Uniti Core metadata, tag WAVs, and rename files.")
-    parser.add_argument("target_directory", help="Target directory.")
+    parser = argparse.ArgumentParser(description="Tag Naim WAVs, reorganize folders, and preserve sidecar files.")
+    parser.add_argument("target_directory", help="The root directory to scan and output files to.")
     parser.add_argument("--dry-run", action="store_true", help="Dry run mode.")
     args = parser.parse_args()
 
-    if not os.path.isdir(args.target_directory):
+    root_dir = os.path.abspath(args.target_directory)
+
+    if not os.path.isdir(root_dir):
         print(f"Error: Directory not found.")
         return
 
-    # Initialize the master activity log
     log_filename = 'tagger_activity.log'
     logging.basicConfig(
         filename=log_filename,
-        level=logging.INFO, # Records everything, not just errors
+        level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    start_msg = f"Scanning target directory: {args.target_directory} {'(DRY RUN)' if args.dry_run else ''}"
+    start_msg = f"Scanning target directory: {root_dir} {'(DRY RUN)' if args.dry_run else ''}"
     print(start_msg)
     logging.info("========================================")
     logging.info(start_msg)
 
-    for root, dirs, files in os.walk(args.target_directory):
+    for root, dirs, files in os.walk(root_dir):
         if 'meta.naim' in files:
-            process_naim_directory(root, dry_run=args.dry_run)
+            process_naim_directory(root, root_dir, dry_run=args.dry_run)
             
     end_msg = "Processing complete."
     print(f"\n{end_msg}")
     logging.info(end_msg)
-    print(f"Activity log saved to: {os.path.abspath(log_filename)}")
+    print(f"Activity log saved to: {os.path.join(os.getcwd(), log_filename)}")
 
 if __name__ == "__main__":
     main()
