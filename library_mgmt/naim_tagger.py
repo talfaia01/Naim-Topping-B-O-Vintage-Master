@@ -21,6 +21,50 @@ def is_valid_meta(val):
         return False
     return True
 
+def safe_move(src, dst):
+    """Safely moves a file, appending a number if the destination already exists to prevent overwriting."""
+    if not os.path.exists(dst):
+        os.rename(src, dst)
+        return dst
+    
+    base, ext = os.path.splitext(dst)
+    counter = 1
+    new_dst = f"{base} ({counter}){ext}"
+    while os.path.exists(new_dst):
+        counter += 1
+        new_dst = f"{base} ({counter}){ext}"
+    
+    os.rename(src, new_dst)
+    return new_dst
+
+def get_image_format(image_bytes):
+    """Reads the magic numbers of the byte string to determine if it's a PNG or JPEG."""
+    if image_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png', 'folder.png'
+    # Fallback to JPEG for standard formats
+    return 'image/jpeg', 'folder.jpg'
+
+def extract_artist(data_block):
+    """Extracts artist name gracefully, whether it's a string or a nested list."""
+    if not isinstance(data_block, dict):
+        return None
+        
+    for key in ['artistname', 'artist_name', 'albumartist']:
+        val = data_block.get(key)
+        if isinstance(val, str) and is_valid_meta(val):
+            return val
+            
+    artist_data = data_block.get('artist')
+    if isinstance(artist_data, str) and is_valid_meta(artist_data):
+        return artist_data
+    elif isinstance(artist_data, list):
+        for item in artist_data:
+            if isinstance(item, dict):
+                name = item.get('name')
+                if is_valid_meta(name):
+                    return name
+    return None
+
 def extract_tracks(provider_data):
     """Dynamically extracts track lists whether Naim stored them as a Dictionary or a List."""
     extracted = {}
@@ -31,7 +75,6 @@ def extract_tracks(provider_data):
     elif isinstance(tracks_data, list):
         for trk in tracks_data:
             if isinstance(trk, dict):
-                # Naim interchanges 'id' and 'index' depending on the database provider
                 t_id = str(trk.get('index', trk.get('id', '')))
                 t_title = trk.get('title', '')
                 if t_id and is_valid_meta(t_title) and not t_title.lower().startswith("track "):
@@ -69,13 +112,24 @@ def process_naim_directory(directory, root_dir, dry_run=False):
         except Exception as e:
             logging.error(f"Artwork decode failure: {e}")
     else:
-        possible_covers = ['userartwork.jpg', 'folder.jpg', 'cover.jpg']
+        # Now searches for both JPG and PNG formats
+        possible_covers = [
+            'userartwork.jpg', 'userartwork.png', 
+            'folder.jpg', 'folder.png', 
+            'cover.jpg', 'cover.png'
+        ]
         for cover_name in possible_covers:
             cover_path = os.path.join(directory, cover_name)
             if os.path.exists(cover_path):
                 with open(cover_path, 'rb') as img_file:
                     image_bytes = img_file.read()
                 break
+
+    # Determine exact image MIME type and target filename
+    img_mime_type = 'image/jpeg'
+    img_filename = 'folder.jpg'
+    if image_bytes:
+        img_mime_type, img_filename = get_image_format(image_bytes)
 
     # --- 2. Cascading Metadata Extraction ---
     album_title = None
@@ -86,30 +140,36 @@ def process_naim_directory(directory, root_dir, dry_run=False):
     user_data = naim_data.get('user')
     if isinstance(user_data, dict):
         album_title = user_data.get('title')
-        album_artist = user_data.get('artist')
+        album_artist = extract_artist(user_data) or user_data.get('artist')
         tracks_dict = extract_tracks(user_data)
 
-    # Priority 2: Internet Databases (AMG, Rovi, FreeDB)
+    # Priority 2: ALL Internet Databases
     meta_block = naim_data.get('meta')
     if isinstance(meta_block, dict):
-        for provider in ['amg', 'rovi', 'freedb', 'default']:
+        providers = [k for k in meta_block.keys() if k != 'default'] + ['default']
+        
+        for provider in providers:
             provider_data = meta_block.get(provider)
             if not isinstance(provider_data, dict):
                 continue
             
             release_data = provider_data.get('release', {})
-            if isinstance(release_data, dict):
-                if not is_valid_meta(album_title):
+            
+            if not is_valid_meta(album_title):
+                if isinstance(release_data, dict):
                     album_title = release_data.get('title')
-                if not is_valid_meta(album_artist):
-                    album_artist = release_data.get('artistname', release_data.get('artist'))
+                if not is_valid_meta(album_title):
+                    album_title = provider_data.get('title')
+                    
+            if not is_valid_meta(album_artist):
+                album_artist = extract_artist(release_data) or extract_artist(provider_data)
             
             if not tracks_dict:
                 tracks_dict = extract_tracks(provider_data)
 
-    # Priority 3: Safe Fallbacks
+    # Priority 3: Safe Fallbacks (ISOLATE FOLDERS)
     if not is_valid_meta(album_title):
-        album_title = "Unknown Album"
+        album_title = os.path.basename(directory)
     if not is_valid_meta(album_artist):
         album_artist = "Unknown Artist"
 
@@ -122,7 +182,8 @@ def process_naim_directory(directory, root_dir, dry_run=False):
     if not dry_run:
         os.makedirs(new_album_dir, exist_ok=True)
         if image_bytes:
-            cover_out_path = os.path.join(new_album_dir, 'folder.jpg')
+            # Drops either folder.jpg or folder.png based on detection
+            cover_out_path = os.path.join(new_album_dir, img_filename)
             if not os.path.exists(cover_out_path):
                 with open(cover_out_path, 'wb') as img_out:
                     img_out.write(image_bytes)
@@ -148,7 +209,7 @@ def process_naim_directory(directory, root_dir, dry_run=False):
         new_filepath = os.path.join(new_album_dir, new_filename)
 
         if dry_run:
-            msg = f"  -> [DRY RUN] Would tag: {filename} | Title: '{track_title}' | Artist: '{album_artist}'"
+            msg = f"  -> [DRY RUN] Would tag: {filename} | Title: '{track_title}'"
             print(msg)
             logging.info(msg)
             
@@ -174,7 +235,7 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                 audio.tags.add(
                     APIC(
                         encoding=3,
-                        mime='image/jpeg',
+                        mime=img_mime_type, # Dynamically sets image/png or image/jpeg
                         type=3,
                         desc='Front Cover',
                         data=image_bytes
@@ -186,9 +247,10 @@ def process_naim_directory(directory, root_dir, dry_run=False):
             print(tag_msg)
             logging.info(tag_msg)
             
-            # --- 6. Move and Rename the physical file ---
-            os.rename(filepath, new_filepath)
-            rename_msg = f"  -> Moved to: {safe_artist}/{safe_album}/{new_filename}"
+            # --- 6. Safe Move and Rename ---
+            final_dest = safe_move(filepath, new_filepath)
+            final_relative = os.path.relpath(final_dest, root_dir)
+            rename_msg = f"  -> Moved to: {final_relative}"
             print(rename_msg)
             logging.info(rename_msg)
             
@@ -212,7 +274,7 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                 
             try:
                 if sidecar_path != new_sidecar_path:
-                    os.rename(sidecar_path, new_sidecar_path)
+                    safe_move(sidecar_path, new_sidecar_path)
                     msg = f"  -> Moved sidecar: {sidecar}"
                     print(msg)
                     logging.info(msg)
@@ -222,7 +284,7 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                 print(f"  -> [ERROR] {err_msg}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Tag Naim WAVs, reorganize folders, and preserve sidecar files.")
+    parser = argparse.ArgumentParser(description="Tag Naim WAVs, safely reorganize folders, and preserve sidecar files.")
     parser.add_argument("target_directory", help="The root directory to scan and output files to.")
     parser.add_argument("--dry-run", action="store_true", help="Dry run mode.")
     args = parser.parse_args()
