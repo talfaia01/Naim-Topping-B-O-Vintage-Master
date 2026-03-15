@@ -9,8 +9,34 @@ from mutagen.id3 import TIT2, TPE1, TPE2, TALB, TRCK, APIC
 
 def sanitize_filename(filename):
     """Removes illegal characters so strings can be used safely as folder or file names."""
-    cleaned = re.sub(r'[\\/*?:"<>|]', "", filename)
+    cleaned = re.sub(r'[\\/*?:"<>|]', "", str(filename))
     return cleaned.strip()
+
+def is_valid_meta(val):
+    """Helper to ensure we don't accidentally accept Naim's generic fallback strings."""
+    if not val:
+        return False
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() == "unknown" or val_str.startswith("Album_"):
+        return False
+    return True
+
+def extract_tracks(provider_data):
+    """Dynamically extracts track lists whether Naim stored them as a Dictionary or a List."""
+    extracted = {}
+    tracks_data = provider_data.get('tracks')
+    
+    if isinstance(tracks_data, dict):
+        extracted = {str(k): v for k, v in tracks_data.items() if is_valid_meta(v) and not str(v).lower().startswith("track ")}
+    elif isinstance(tracks_data, list):
+        for trk in tracks_data:
+            if isinstance(trk, dict):
+                # Naim interchanges 'id' and 'index' depending on the database provider
+                t_id = str(trk.get('index', trk.get('id', '')))
+                t_title = trk.get('title', '')
+                if t_id and is_valid_meta(t_title) and not t_title.lower().startswith("track "):
+                    extracted[t_id] = t_title
+    return extracted
 
 def process_naim_directory(directory, root_dir, dry_run=False):
     meta_file = os.path.join(directory, 'meta.naim')
@@ -51,24 +77,41 @@ def process_naim_directory(directory, root_dir, dry_run=False):
                     image_bytes = img_file.read()
                 break
 
-    # --- 2. Extract Metadata (Hardened Type-Checking) ---
+    # --- 2. Cascading Metadata Extraction ---
+    album_title = None
+    album_artist = None
+    tracks_dict = {}
+
+    # Priority 1: Manual User Edits
     user_data = naim_data.get('user')
-    user_data = user_data if isinstance(user_data, dict) else {}
+    if isinstance(user_data, dict):
+        album_title = user_data.get('title')
+        album_artist = user_data.get('artist')
+        tracks_dict = extract_tracks(user_data)
 
+    # Priority 2: Internet Databases (AMG, Rovi, FreeDB)
     meta_block = naim_data.get('meta')
-    meta_block = meta_block if isinstance(meta_block, dict) else {}
-    
-    meta_default = meta_block.get('default')
-    meta_default = meta_default if isinstance(meta_default, dict) else {}
+    if isinstance(meta_block, dict):
+        for provider in ['amg', 'rovi', 'freedb', 'default']:
+            provider_data = meta_block.get(provider)
+            if not isinstance(provider_data, dict):
+                continue
+            
+            release_data = provider_data.get('release', {})
+            if isinstance(release_data, dict):
+                if not is_valid_meta(album_title):
+                    album_title = release_data.get('title')
+                if not is_valid_meta(album_artist):
+                    album_artist = release_data.get('artistname', release_data.get('artist'))
+            
+            if not tracks_dict:
+                tracks_dict = extract_tracks(provider_data)
 
-    release_data = meta_default.get('release')
-    release_data = release_data if isinstance(release_data, dict) else {}
-
-    album_title = user_data.get('title') or release_data.get('title', 'Unknown Album')
-    album_artist = user_data.get('artist') or release_data.get('artistname', 'Unknown Artist')
-    
-    user_tracks_dict = user_data.get('tracks')
-    user_tracks_dict = user_tracks_dict if isinstance(user_tracks_dict, dict) else {}
+    # Priority 3: Safe Fallbacks
+    if not is_valid_meta(album_title):
+        album_title = "Unknown Album"
+    if not is_valid_meta(album_artist):
+        album_artist = "Unknown Artist"
 
     # --- 3. Create the New Folder Hierarchy ---
     safe_artist = sanitize_filename(album_artist)
@@ -94,7 +137,10 @@ def process_naim_directory(directory, root_dir, dry_run=False):
     for index, filename in enumerate(wav_files):
         track_number = str(index + 1)
         filepath = os.path.join(directory, filename)
-        track_title = user_tracks_dict.get(track_number, f"Track {track_number}")
+        
+        track_title = tracks_dict.get(track_number)
+        if not is_valid_meta(track_title):
+            track_title = f"Track {track_number}"
 
         safe_title = sanitize_filename(track_title)
         padded_track = track_number.zfill(2)
@@ -102,7 +148,7 @@ def process_naim_directory(directory, root_dir, dry_run=False):
         new_filepath = os.path.join(new_album_dir, new_filename)
 
         if dry_run:
-            msg = f"  -> [DRY RUN] Would tag: {filename} | Title: '{track_title}'"
+            msg = f"  -> [DRY RUN] Would tag: {filename} | Title: '{track_title}' | Artist: '{album_artist}'"
             print(msg)
             logging.info(msg)
             
