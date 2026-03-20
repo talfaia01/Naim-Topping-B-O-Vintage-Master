@@ -69,7 +69,7 @@ When adding this resource to your BeoLiving Intelligence, configure the followin
 * **Preset Tuning:** A clean UI dropdown selector to instantly tune to Presets P1 through P0 (10), utilizing your custom parameter labels.
 
 **House Party Mode**
-* A single UI switch that instantly forces the Naim Uniti Core to broadcast its Line-In, wakes up the BeoLink ecosystem, and distributes the audiophile stream perfectly in-sync to all secondary zones defined in your BLI parameters.
+* A single UI switch that instantly forces the B&O Beosound Core to broadcast its Line-In, wakes up the BeoLink ecosystem, and distributes the Naim Core audiophile stream perfectly in-sync to all secondary zones defined in your BLI parameters.
 
 ---
 
